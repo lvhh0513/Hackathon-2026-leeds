@@ -1,11 +1,36 @@
 # RetinaTransform — AI-Powered Retinal Screening
 
-### AI in Healthcare Hackathon | University of Leeds
+## Meet the Team
 
-**Event:** AI in Healthcare Hackathon, organised by Leeds Artificial Intelligence Society  
-**Venue:** Helix, University of Leeds, Leeds, United Kingdom  
-**Dates:** 24–25 October 2026  
-**Team:** Four students from the University of Leeds
+### An Interdisciplinary Team from the University of Leeds
+
+RetinaTransform is being developed by a team of four students from the **University of Leeds** as part of the AI in Healthcare Hackathon organised by Leeds Artificial Intelligence Society. Bringing together expertise from computer science and mechanical engineering, our team combines software development and engineering perspectives to explore how AI can support healthcare screening workflows.
+
+| Team Member | University of Leeds ID | School |
+|---|---|---|
+| **Khudayar Khudiyev** | `lvhh0513` | School of Computer Science |
+| **Yuta Tsutsumi** | `rwjq0840` | School of Computer Science |
+| **Hibaq Omar** | `lhqg0050` | School of Mechanical Engineering |
+| **Kunwar Ranjeet** | `bcjp0382` | School of Computer Science |
+
+We all four team members are students at the **University of Leeds, United Kingdom**.
+
+### Our Collaboration
+
+Our team brings together complementary perspectives to build a healthcare-focused AI prototype:
+
+- **Computer Science:** Software engineering, application development, backend services, and AI system integration.
+- **Mechanical Engineering:** An engineering perspective on system design, practical problem-solving, and interdisciplinary innovation.
+- **Collaborative development:** Working together to integrate the web application, authentication services, and retinal screening interface into one cohesive prototype.
+
+Through this project, we aim to demonstrate how interdisciplinary collaboration can translate an AI healthcare concept into a working technical prototype, while keeping usability, responsible AI, and clinical limitations in view.
+
+**Hackathon:** AI in Healthcare Hackathon  
+**Organiser:** Leeds Artificial Intelligence Society  
+**Institution:** University of Leeds  
+**Location:** Helix, Leeds, United Kingdom  
+**Event dates:** 24–25 October 2026
+
 
 RetinaTransform is a healthcare-focused software project that brings together a modern web interface, secure user authentication, and an AI-powered retinal screening application. The project is being developed for the AI in Healthcare Hackathon at the University of Leeds, where medical and engineering students collaborate to explore practical solutions to real clinical challenges.
 
