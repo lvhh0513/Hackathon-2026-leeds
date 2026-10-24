@@ -1,0 +1,750 @@
+[
+  {
+    "id": "SYN-0000",
+    "age_band": "18-30",
+    "sex": "F",
+    "condition": "none",
+    "medications": [],
+    "pathway_stage": "follow-up",
+    "heart_rate": 72,
+    "systolic_bp": 131,
+    "spo2": 92,
+    "days_waiting": 35,
+    "synthetic": true
+  },
+  {
+    "id": "SYN-0001",
+    "age_band": "18-30",
+    "sex": "F",
+    "condition": "none",
+    "medications": [],
+    "pathway_stage": "discharge",
+    "heart_rate": 82,
+    "systolic_bp": 104,
+    "spo2": 89,
+    "days_waiting": 23,
+    "synthetic": true
+  },
+  {
+    "id": "SYN-0002",
+    "age_band": "31-45",
+    "sex": "F",
+    "condition": "type 2 diabetes",
+    "medications": [
+      "metformin"
+    ],
+    "pathway_stage": "discharge",
+    "heart_rate": 67,
+    "systolic_bp": 169,
+    "spo2": 95,
+    "days_waiting": 56,
+    "synthetic": true
+  },
+  {
+    "id": "SYN-0003",
+    "age_band": "76+",
+    "sex": "M",
+    "condition": "COPD",
+    "medications": [
+      "tiotropium"
+    ],
+    "pathway_stage": "referral",
+    "heart_rate": 103,
+    "systolic_bp": 120,
+    "spo2": 100,
+    "days_waiting": 108,
+    "synthetic": true
+  },
+  {
+    "id": "SYN-0004",
+    "age_band": "46-60",
+    "sex": "F",
+    "condition": "asthma",
+    "medications": [
+      "salbutamol inhaler"
+    ],
+    "pathway_stage": "pre-op assessment",
+    "heart_rate": 103,
+    "systolic_bp": 143,
+    "spo2": 90,
+    "days_waiting": 23,
+    "synthetic": true
+  },
+  {
+    "id": "SYN-0005",
+    "age_band": "18-30",
+    "sex": "M",
+    "condition": "COPD",
+    "medications": [
+      "tiotropium"
+    ],
+    "pathway_stage": "surgery",
+    "heart_rate": 93,
+    "systolic_bp": 133,
+    "spo2": 89,
+    "days_waiting": 117,
+    "synthetic": true
+  },
+  {
+    "id": "SYN-0006",
+    "age_band": "18-30",
+    "sex": "M",
+    "condition": "atrial fibrillation",
+    "medications": [
+      "apixaban"
+    ],
+    "pathway_stage": "referral",
+    "heart_rate": 90,
+    "systolic_bp": 137,
+    "spo2": 99,
+    "days_waiting": 158,
+    "synthetic": true
+  },
+  {
+    "id": "SYN-0007",
+    "age_band": "76+",
+    "sex": "F",
+    "condition": "asthma",
+    "medications": [
+      "salbutamol inhaler"
+    ],
+    "pathway_stage": "follow-up",
+    "heart_rate": 59,
+    "systolic_bp": 105,
+    "spo2": 99,
+    "days_waiting": 58,
+    "synthetic": true
+  },
+  {
+    "id": "SYN-0008",
+    "age_band": "18-30",
+    "sex": "F",
+    "condition": "asthma",
+    "medications": [
+      "salbutamol inhaler"
+    ],
+    "pathway_stage": "referral",
+    "heart_rate": 79,
+    "systolic_bp": 135,
+    "spo2": 96,
+    "days_waiting": 162,
+    "synthetic": true
+  },
+  {
+    "id": "SYN-0009",
+    "age_band": "31-45",
+    "sex": "M",
+    "condition": "asthma",
+    "medications": [
+      "salbutamol inhaler"
+    ],
+    "pathway_stage": "surgery",
+    "heart_rate": 68,
+    "systolic_bp": 134,
+    "spo2": 100,
+    "days_waiting": 174,
+    "synthetic": true
+  },
+  {
+    "id": "SYN-0010",
+    "age_band": "18-30",
+    "sex": "F",
+    "condition": "none",
+    "medications": [],
+    "pathway_stage": "discharge",
+    "heart_rate": 101,
+    "systolic_bp": 131,
+    "spo2": 91,
+    "days_waiting": 118,
+    "synthetic": true
+  },
+  {
+    "id": "SYN-0011",
+    "age_band": "46-60",
+    "sex": "F",
+    "condition": "COPD",
+    "medications": [
+      "tiotropium"
+    ],
+    "pathway_stage": "follow-up",
+    "heart_rate": 75,
+    "systolic_bp": 107,
+    "spo2": 92,
+    "days_waiting": 8,
+    "synthetic": true
+  },
+  {
+    "id": "SYN-0012",
+    "age_band": "61-75",
+    "sex": "M",
+    "condition": "asthma",
+    "medications": [
+      "salbutamol inhaler"
+    ],
+    "pathway_stage": "referral",
+    "heart_rate": 68,
+    "systolic_bp": 140,
+    "spo2": 92,
+    "days_waiting": 167,
+    "synthetic": true
+  },
+  {
+    "id": "SYN-0013",
+    "age_band": "61-75",
+    "sex": "M",
+    "condition": "COPD",
+    "medications": [
+      "tiotropium"
+    ],
+    "pathway_stage": "pre-op assessment",
+    "heart_rate": 71,
+    "systolic_bp": 117,
+    "spo2": 92,
+    "days_waiting": 143,
+    "synthetic": true
+  },
+  {
+    "id": "SYN-0014",
+    "age_band": "46-60",
+    "sex": "M",
+    "condition": "atrial fibrillation",
+    "medications": [
+      "apixaban"
+    ],
+    "pathway_stage": "discharge",
+    "heart_rate": 80,
+    "systolic_bp": 146,
+    "spo2": 92,
+    "days_waiting": 35,
+    "synthetic": true
+  },
+  {
+    "id": "SYN-0015",
+    "age_band": "61-75",
+    "sex": "F",
+    "condition": "atrial fibrillation",
+    "medications": [
+      "apixaban"
+    ],
+    "pathway_stage": "referral",
+    "heart_rate": 110,
+    "systolic_bp": 114,
+    "spo2": 91,
+    "days_waiting": 160,
+    "synthetic": true
+  },
+  {
+    "id": "SYN-0016",
+    "age_band": "61-75",
+    "sex": "F",
+    "condition": "type 2 diabetes",
+    "medications": [
+      "metformin"
+    ],
+    "pathway_stage": "post-op ward",
+    "heart_rate": 79,
+    "systolic_bp": 159,
+    "spo2": 97,
+    "days_waiting": 64,
+    "synthetic": true
+  },
+  {
+    "id": "SYN-0017",
+    "age_band": "18-30",
+    "sex": "F",
+    "condition": "atrial fibrillation",
+    "medications": [
+      "apixaban"
+    ],
+    "pathway_stage": "follow-up",
+    "heart_rate": 111,
+    "systolic_bp": 168,
+    "spo2": 93,
+    "days_waiting": 164,
+    "synthetic": true
+  },
+  {
+    "id": "SYN-0018",
+    "age_band": "18-30",
+    "sex": "M",
+    "condition": "asthma",
+    "medications": [
+      "salbutamol inhaler"
+    ],
+    "pathway_stage": "post-op ward",
+    "heart_rate": 65,
+    "systolic_bp": 158,
+    "spo2": 89,
+    "days_waiting": 67,
+    "synthetic": true
+  },
+  {
+    "id": "SYN-0019",
+    "age_band": "31-45",
+    "sex": "F",
+    "condition": "atrial fibrillation",
+    "medications": [
+      "apixaban"
+    ],
+    "pathway_stage": "follow-up",
+    "heart_rate": 74,
+    "systolic_bp": 164,
+    "spo2": 98,
+    "days_waiting": 50,
+    "synthetic": true
+  },
+  {
+    "id": "SYN-0020",
+    "age_band": "46-60",
+    "sex": "F",
+    "condition": "type 2 diabetes",
+    "medications": [
+      "metformin"
+    ],
+    "pathway_stage": "discharge",
+    "heart_rate": 104,
+    "systolic_bp": 167,
+    "spo2": 89,
+    "days_waiting": 153,
+    "synthetic": true
+  },
+  {
+    "id": "SYN-0021",
+    "age_band": "61-75",
+    "sex": "F",
+    "condition": "asthma",
+    "medications": [
+      "salbutamol inhaler"
+    ],
+    "pathway_stage": "referral",
+    "heart_rate": 114,
+    "systolic_bp": 146,
+    "spo2": 93,
+    "days_waiting": 61,
+    "synthetic": true
+  },
+  {
+    "id": "SYN-0022",
+    "age_band": "31-45",
+    "sex": "F",
+    "condition": "hypertension",
+    "medications": [
+      "amlodipine",
+      "ramipril"
+    ],
+    "pathway_stage": "referral",
+    "heart_rate": 101,
+    "systolic_bp": 162,
+    "spo2": 90,
+    "days_waiting": 136,
+    "synthetic": true
+  },
+  {
+    "id": "SYN-0023",
+    "age_band": "31-45",
+    "sex": "M",
+    "condition": "type 2 diabetes",
+    "medications": [
+      "metformin"
+    ],
+    "pathway_stage": "discharge",
+    "heart_rate": 65,
+    "systolic_bp": 133,
+    "spo2": 97,
+    "days_waiting": 155,
+    "synthetic": true
+  },
+  {
+    "id": "SYN-0024",
+    "age_band": "31-45",
+    "sex": "F",
+    "condition": "COPD",
+    "medications": [
+      "tiotropium"
+    ],
+    "pathway_stage": "follow-up",
+    "heart_rate": 74,
+    "systolic_bp": 151,
+    "spo2": 99,
+    "days_waiting": 166,
+    "synthetic": true
+  },
+  {
+    "id": "SYN-0025",
+    "age_band": "61-75",
+    "sex": "M",
+    "condition": "asthma",
+    "medications": [
+      "salbutamol inhaler"
+    ],
+    "pathway_stage": "referral",
+    "heart_rate": 70,
+    "systolic_bp": 128,
+    "spo2": 90,
+    "days_waiting": 86,
+    "synthetic": true
+  },
+  {
+    "id": "SYN-0026",
+    "age_band": "76+",
+    "sex": "F",
+    "condition": "hypertension",
+    "medications": [
+      "amlodipine",
+      "ramipril"
+    ],
+    "pathway_stage": "discharge",
+    "heart_rate": 69,
+    "systolic_bp": 100,
+    "spo2": 90,
+    "days_waiting": 161,
+    "synthetic": true
+  },
+  {
+    "id": "SYN-0027",
+    "age_band": "31-45",
+    "sex": "F",
+    "condition": "hypertension",
+    "medications": [
+      "amlodipine",
+      "ramipril"
+    ],
+    "pathway_stage": "referral",
+    "heart_rate": 110,
+    "systolic_bp": 142,
+    "spo2": 90,
+    "days_waiting": 131,
+    "synthetic": true
+  },
+  {
+    "id": "SYN-0028",
+    "age_band": "46-60",
+    "sex": "M",
+    "condition": "type 2 diabetes",
+    "medications": [
+      "metformin"
+    ],
+    "pathway_stage": "pre-op assessment",
+    "heart_rate": 89,
+    "systolic_bp": 116,
+    "spo2": 100,
+    "days_waiting": 146,
+    "synthetic": true
+  },
+  {
+    "id": "SYN-0029",
+    "age_band": "61-75",
+    "sex": "F",
+    "condition": "atrial fibrillation",
+    "medications": [
+      "apixaban"
+    ],
+    "pathway_stage": "post-op ward",
+    "heart_rate": 106,
+    "systolic_bp": 152,
+    "spo2": 92,
+    "days_waiting": 24,
+    "synthetic": true
+  },
+  {
+    "id": "SYN-0030",
+    "age_band": "61-75",
+    "sex": "M",
+    "condition": "hypertension",
+    "medications": [
+      "amlodipine",
+      "ramipril"
+    ],
+    "pathway_stage": "post-op ward",
+    "heart_rate": 81,
+    "systolic_bp": 159,
+    "spo2": 100,
+    "days_waiting": 13,
+    "synthetic": true
+  },
+  {
+    "id": "SYN-0031",
+    "age_band": "18-30",
+    "sex": "F",
+    "condition": "none",
+    "medications": [],
+    "pathway_stage": "post-op ward",
+    "heart_rate": 101,
+    "systolic_bp": 143,
+    "spo2": 90,
+    "days_waiting": 63,
+    "synthetic": true
+  },
+  {
+    "id": "SYN-0032",
+    "age_band": "31-45",
+    "sex": "M",
+    "condition": "type 2 diabetes",
+    "medications": [
+      "metformin"
+    ],
+    "pathway_stage": "pre-op assessment",
+    "heart_rate": 82,
+    "systolic_bp": 123,
+    "spo2": 93,
+    "days_waiting": 118,
+    "synthetic": true
+  },
+  {
+    "id": "SYN-0033",
+    "age_band": "18-30",
+    "sex": "M",
+    "condition": "type 2 diabetes",
+    "medications": [
+      "metformin"
+    ],
+    "pathway_stage": "discharge",
+    "heart_rate": 61,
+    "systolic_bp": 106,
+    "spo2": 99,
+    "days_waiting": 138,
+    "synthetic": true
+  },
+  {
+    "id": "SYN-0034",
+    "age_band": "18-30",
+    "sex": "F",
+    "condition": "hypertension",
+    "medications": [
+      "amlodipine",
+      "ramipril"
+    ],
+    "pathway_stage": "pre-op assessment",
+    "heart_rate": 81,
+    "systolic_bp": 162,
+    "spo2": 96,
+    "days_waiting": 54,
+    "synthetic": true
+  },
+  {
+    "id": "SYN-0035",
+    "age_band": "18-30",
+    "sex": "F",
+    "condition": "COPD",
+    "medications": [
+      "tiotropium"
+    ],
+    "pathway_stage": "post-op ward",
+    "heart_rate": 55,
+    "systolic_bp": 149,
+    "spo2": 93,
+    "days_waiting": 116,
+    "synthetic": true
+  },
+  {
+    "id": "SYN-0036",
+    "age_band": "61-75",
+    "sex": "M",
+    "condition": "asthma",
+    "medications": [
+      "salbutamol inhaler"
+    ],
+    "pathway_stage": "pre-op assessment",
+    "heart_rate": 67,
+    "systolic_bp": 137,
+    "spo2": 92,
+    "days_waiting": 14,
+    "synthetic": true
+  },
+  {
+    "id": "SYN-0037",
+    "age_band": "76+",
+    "sex": "F",
+    "condition": "atrial fibrillation",
+    "medications": [
+      "apixaban"
+    ],
+    "pathway_stage": "follow-up",
+    "heart_rate": 75,
+    "systolic_bp": 107,
+    "spo2": 89,
+    "days_waiting": 149,
+    "synthetic": true
+  },
+  {
+    "id": "SYN-0038",
+    "age_band": "76+",
+    "sex": "F",
+    "condition": "COPD",
+    "medications": [
+      "tiotropium"
+    ],
+    "pathway_stage": "referral",
+    "heart_rate": 87,
+    "systolic_bp": 110,
+    "spo2": 91,
+    "days_waiting": 17,
+    "synthetic": true
+  },
+  {
+    "id": "SYN-0039",
+    "age_band": "18-30",
+    "sex": "F",
+    "condition": "atrial fibrillation",
+    "medications": [
+      "apixaban"
+    ],
+    "pathway_stage": "post-op ward",
+    "heart_rate": 62,
+    "systolic_bp": 131,
+    "spo2": 98,
+    "days_waiting": 152,
+    "synthetic": true
+  },
+  {
+    "id": "SYN-0040",
+    "age_band": "76+",
+    "sex": "F",
+    "condition": "hypertension",
+    "medications": [
+      "amlodipine",
+      "ramipril"
+    ],
+    "pathway_stage": "post-op ward",
+    "heart_rate": 97,
+    "systolic_bp": 166,
+    "spo2": 94,
+    "days_waiting": 66,
+    "synthetic": true
+  },
+  {
+    "id": "SYN-0041",
+    "age_band": "46-60",
+    "sex": "F",
+    "condition": "type 2 diabetes",
+    "medications": [
+      "metformin"
+    ],
+    "pathway_stage": "surgery",
+    "heart_rate": 80,
+    "systolic_bp": 116,
+    "spo2": 99,
+    "days_waiting": 165,
+    "synthetic": true
+  },
+  {
+    "id": "SYN-0042",
+    "age_band": "61-75",
+    "sex": "M",
+    "condition": "asthma",
+    "medications": [
+      "salbutamol inhaler"
+    ],
+    "pathway_stage": "referral",
+    "heart_rate": 55,
+    "systolic_bp": 158,
+    "spo2": 98,
+    "days_waiting": 144,
+    "synthetic": true
+  },
+  {
+    "id": "SYN-0043",
+    "age_band": "18-30",
+    "sex": "F",
+    "condition": "hypertension",
+    "medications": [
+      "amlodipine",
+      "ramipril"
+    ],
+    "pathway_stage": "discharge",
+    "heart_rate": 71,
+    "systolic_bp": 116,
+    "spo2": 94,
+    "days_waiting": 17,
+    "synthetic": true
+  },
+  {
+    "id": "SYN-0044",
+    "age_band": "46-60",
+    "sex": "M",
+    "condition": "type 2 diabetes",
+    "medications": [
+      "metformin"
+    ],
+    "pathway_stage": "pre-op assessment",
+    "heart_rate": 83,
+    "systolic_bp": 169,
+    "spo2": 100,
+    "days_waiting": 77,
+    "synthetic": true
+  },
+  {
+    "id": "SYN-0045",
+    "age_band": "76+",
+    "sex": "F",
+    "condition": "atrial fibrillation",
+    "medications": [
+      "apixaban"
+    ],
+    "pathway_stage": "follow-up",
+    "heart_rate": 107,
+    "systolic_bp": 170,
+    "spo2": 93,
+    "days_waiting": 169,
+    "synthetic": true
+  },
+  {
+    "id": "SYN-0046",
+    "age_band": "31-45",
+    "sex": "M",
+    "condition": "hypertension",
+    "medications": [
+      "amlodipine",
+      "ramipril"
+    ],
+    "pathway_stage": "referral",
+    "heart_rate": 111,
+    "systolic_bp": 113,
+    "spo2": 100,
+    "days_waiting": 141,
+    "synthetic": true
+  },
+  {
+    "id": "SYN-0047",
+    "age_band": "46-60",
+    "sex": "M",
+    "condition": "type 2 diabetes",
+    "medications": [
+      "metformin"
+    ],
+    "pathway_stage": "discharge",
+    "heart_rate": 68,
+    "systolic_bp": 143,
+    "spo2": 92,
+    "days_waiting": 175,
+    "synthetic": true
+  },
+  {
+    "id": "SYN-0048",
+    "age_band": "46-60",
+    "sex": "M",
+    "condition": "none",
+    "medications": [],
+    "pathway_stage": "surgery",
+    "heart_rate": 112,
+    "systolic_bp": 106,
+    "spo2": 90,
+    "days_waiting": 162,
+    "synthetic": true
+  },
+  {
+    "id": "SYN-0049",
+    "age_band": "46-60",
+    "sex": "F",
+    "condition": "COPD",
+    "medications": [
+      "tiotropium"
+    ],
+    "pathway_stage": "referral",
+    "heart_rate": 76,
+    "systolic_bp": 116,
+    "spo2": 99,
+    "days_waiting": 67,
+    "synthetic": true
+  }
+]

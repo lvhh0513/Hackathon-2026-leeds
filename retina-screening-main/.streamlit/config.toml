@@ -1,0 +1,8 @@
+# Theme inspired by the NetraSetu look (cream + crimson). Colours chosen for high contrast.
+[theme]
+base = "light"
+primaryColor = "#C42B2B"
+backgroundColor = "#FAF6EF"
+secondaryBackgroundColor = "#F0E4D0"
+textColor = "#2C1810"
+font = "sans serif"
