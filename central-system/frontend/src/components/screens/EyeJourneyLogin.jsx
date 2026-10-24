@@ -36,7 +36,13 @@ export const EyeJourneyLogin = ({ onLogin }) => {
   // Auth state — ported from LoginScreen
   const [hoveredRole, setHoveredRole] = useState(null);
   const [selectedRole, setSelectedRole] = useState(null);
-  const [activeAuthRole, setActiveAuthRole] = useState(null);
+  const [activeAuthRole, setActiveAuthRole] = useState(null); // null | ophthalmologist | signup
+  const [signupName, setSignupName] = useState('');
+  const [signupEmail, setSignupEmail] = useState('');
+  const [signupPassword, setSignupPassword] = useState('');
+  const [signupConfirm, setSignupConfirm] = useState('');
+  const [signupError, setSignupError] = useState('');
+  const [signupLoading, setSignupLoading] = useState(false);
 
   // Live mode starts empty (the seeded demo accounts' credentials are printed
   // once by scripts/seed-demo.js); mock mode keeps its demo pre-fill.
@@ -50,25 +56,16 @@ export const EyeJourneyLogin = ({ onLogin }) => {
   const [ophthError, setOphthError] = useState(null);
   const [ophthLoading, setOphthLoading] = useState(false);
 
+  // Display names only: the existing backend still uses its original role identifiers.
   const ROLES = [
     {
-      id: 'ophthalmologist',
-      title: t('central.login.roles.ophthalmologist.title', 'OPHTHALMOLOGIST'),
-      subtitle: t('central.login.roles.ophthalmologist.subtitle', 'Case Review & Diagnosis'),
-      description: t('central.login.roles.ophthalmologist.desc', 'Review AI-graded retinal scans, confirm or override diagnoses, and manage the review queue.'),
+      id: 'ophthalmologist', // Retained until the auth backend is simplified.
+      title: 'HACKATHON MEMBERS',
+      subtitle: 'RETINAL IMAGE SUBMISSION',
+      description: 'Upload your retinal eye image for AI-assisted screening. Track your submission status and receive screening results from the RetinaTransform team.',
       icon: '◉',
-
-    },
-    {
-      id: 'admin',
-      title: t('central.login.roles.admin.title', 'DISTRICT WORKER'),
-      subtitle: t('central.login.roles.admin.subtitle', 'Analytics & Oversight'),
-      description: t('central.login.roles.admin.desc', 'Monitor PHC performance, track referrals, view screening analytics, and manage district-wide operations.'),
-      icon: '⬡',
-
     },
   ];
-
   // DOM refs
   const containerRef = useRef(null);
   const inkRef = useRef(null);
@@ -173,6 +170,39 @@ export const EyeJourneyLogin = ({ onLogin }) => {
       demoCheck: () => (ophthUsername.toLowerCase() === 'doctor' && ophthPassword === 'doctor123') || ophthPassword.length >= 4,
       demoHint: 'INVALID CREDENTIALS. USE DEMO: doctor / doctor123',
     });
+  };
+
+  const handleSignup = async (e) => {
+    e.preventDefault();
+    setSignupError('');
+    if (signupPassword !== signupConfirm) {
+      setSignupError('Passwords do not match.');
+      return;
+    }
+    if (signupPassword.length < 12) {
+      setSignupError('Password must be at least 12 characters.');
+      return;
+    }
+    if (USE_MOCK_DATA) {
+      setSignupError('Disable mock mode to create real accounts.');
+      return;
+    }
+    setSignupLoading(true);
+    try {
+      const response = await fetch('/api/v1/auth/register', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: signupName.trim(), email: signupEmail.trim(), password: signupPassword }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || 'Registration failed.');
+      setIsTransitioning(true);
+      setTimeout(() => onLogin('ophthalmologist', result.user.email, result.user), 400);
+    } catch (err) {
+      setSignupError(err.message || 'Could not connect to the backend.');
+      setSignupLoading(false);
+    }
   };
 
   // --- Animation Orchestration ---
@@ -457,7 +487,7 @@ export const EyeJourneyLogin = ({ onLogin }) => {
   // --- Auth UI ---
   const renderAuthCard = (role) => {
     const isAdmin = role === 'admin';
-    const roleLabel = isAdmin ? t('central.login.roles.admin.title', 'DISTRICT WORKER') : t('central.login.roles.ophthalmologist.title', 'OPHTHALMOLOGIST');
+    const roleLabel = isAdmin ? 'RETINATRANSFORM TEAM' : 'HACKATHON MEMBERS';
     const username = isAdmin ? adminUsername : ophthUsername;
     const setUsername = isAdmin ? setAdminUsername : setOphthUsername;
     const password = isAdmin ? adminPassword : ophthPassword;
@@ -508,8 +538,95 @@ export const EyeJourneyLogin = ({ onLogin }) => {
     );
   };
 
+  const renderSignupCard = () => (
+    <div className="login-auth-container">
+      <div className="login-auth-topbar">
+        <span style={{ fontWeight: 600 }}>CREATE YOUR ACCOUNT</span>
+        <button type="button" className="login-auth-back-btn" onClick={handleBackToRoles}>← BACK</button>
+      </div>
+      <div className="login-auth-box">
+        <form onSubmit={handleSignup}>
+          {signupError && <div className="login-auth-error" role="alert">{signupError}</div>}
+          <div className="login-auth-field">
+            <label className="login-auth-label" htmlFor="signup-name">FULL NAME</label>
+            <input id="signup-name" className="login-auth-input" type="text" autoComplete="name" required minLength={2} maxLength={100} value={signupName} onChange={e => setSignupName(e.target.value)} />
+          </div>
+          <div className="login-auth-field">
+            <label className="login-auth-label" htmlFor="signup-email">EMAIL</label>
+            <input id="signup-email" className="login-auth-input" type="email" autoComplete="email" required value={signupEmail} onChange={e => setSignupEmail(e.target.value)} />
+          </div>
+          <div className="login-auth-field">
+            <label className="login-auth-label" htmlFor="signup-password">PASSWORD (12+ CHARACTERS)</label>
+            <input id="signup-password" className="login-auth-input" type="password" autoComplete="new-password" required minLength={12} value={signupPassword} onChange={e => setSignupPassword(e.target.value)} />
+          </div>
+          <div className="login-auth-field">
+            <label className="login-auth-label" htmlFor="signup-confirm">CONFIRM PASSWORD</label>
+            <input id="signup-confirm" className="login-auth-input" type="password" autoComplete="new-password" required value={signupConfirm} onChange={e => setSignupConfirm(e.target.value)} />
+          </div>
+          <button type="submit" className="login-auth-submit" disabled={signupLoading}>
+            {signupLoading ? 'CREATING ACCOUNT...' : 'CREATE ACCOUNT ✦'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+
   return (
     <div className="eye-journey" ref={containerRef}>
+      <style>{`
+        .eye-journey .login-auth-back-btn {
+          background: #a92325 !important;
+          color: #fff !important;
+          border: 1px solid #e45b50 !important;
+          opacity: 1 !important;
+          font-weight: 700;
+          box-shadow: 3px 3px 0 #210d09;
+        }
+        .eye-journey .login-auth-back-btn:hover,
+        .eye-journey .login-auth-back-btn:focus-visible {
+          background: #c93232 !important;
+          color: #fff !important;
+        }
+        .eye-journey .enter__roles--single {
+          display: flex;
+          justify-content: center;
+        }
+        .eye-journey .enter__roles--single > .enter__role {
+          width: min(100%, 650px);
+          flex: 0 1 650px;
+        }
+        .eye-journey .brand__name {
+          font-size: clamp(2.1rem, 6.2vw, 7rem);
+          white-space: nowrap;
+          letter-spacing: -0.055em;
+        }
+        @media (max-width: 480px) {
+          .eye-journey .brand__name {
+            font-size: clamp(1.65rem, 7.1vw, 2.5rem);
+          }
+        }
+        .eye-journey .signup-action-row {
+          display: flex;
+          justify-content: center;
+          margin: 25px 0 0;
+        }
+        .eye-journey .signup-action-button {
+          background: #ae2424;
+          color: #fff;
+          border: 1px solid #e15a50;
+          padding: 14px 42px;
+          font: 700 15px 'Inter Variable', sans-serif;
+          letter-spacing: 0.14em;
+          cursor: pointer;
+          box-shadow: 4px 4px 0 #230d0b;
+          transition: background 150ms ease, transform 150ms ease;
+        }
+        .eye-journey .signup-action-button:hover,
+        .eye-journey .signup-action-button:focus-visible {
+          background: #cc3232;
+          transform: translateY(-2px);
+        }
+      `}</style>
       {/* Cybernetic corner frame */}
       <div className="frame-corner frame-corner--tl" aria-hidden="true"></div>
       <div className="frame-corner frame-corner--tr" aria-hidden="true"></div>
@@ -518,8 +635,8 @@ export const EyeJourneyLogin = ({ onLogin }) => {
 
       {/* System HUD */}
       <div className="hud" aria-hidden="true">
-        SYS::NETRA_SETU<br />
-        NETRASETU ACTIVE
+        SYS::RETINATRANSFORM<br />
+        RETINATRANSFORM ACTIVE
       </div>
 
       <a className="skip" href="#auth-overlay" onClick={skipAnimation} data-skip>
@@ -541,7 +658,7 @@ export const EyeJourneyLogin = ({ onLogin }) => {
       <main id="story">
         <header className="brand" id="brand" ref={brandRef}>
           <h1 className="brand__name">
-            NETRA<span className="accent">SETU</span>
+            RETINA<span className="accent">TRANSFORM</span>
           </h1>
           <p className="brand__tagline">
             EXPLAINABLE AI FOR DIABETIC RETINOPATHY
@@ -560,12 +677,14 @@ export const EyeJourneyLogin = ({ onLogin }) => {
         {/* Auth Overlay — reveals at scroll end */}
         <section className="enter" id="auth-overlay">
           <div className="enter__content">
-            {activeAuthRole ? (
+            {activeAuthRole === 'signup' ? (
+              renderSignupCard()
+            ) : activeAuthRole ? (
               renderAuthCard(activeAuthRole)
             ) : (
               <>
-                <p className="enter__title">SELECT YOUR ROLE TO PROCEED</p>
-                <div className="enter__roles">
+                <p className="enter__title">SELECT YOUR PORTAL TO PROCEED</p>
+                <div className="enter__roles enter__roles--single">
                   {ROLES.map((role) => (
                     <button
                       key={role.id}
@@ -581,6 +700,16 @@ export const EyeJourneyLogin = ({ onLogin }) => {
                       <div className="enter__role-arrow">→</div>
                     </button>
                   ))}
+                </div>
+                <div className="signup-action-row">
+                  <button
+                    type="button"
+                    className="signup-action-button"
+                    onClick={() => setActiveAuthRole('signup')}
+                    disabled={isTransitioning}
+                  >
+                    SIGN UP +
+                  </button>
                 </div>
               </>
             )}

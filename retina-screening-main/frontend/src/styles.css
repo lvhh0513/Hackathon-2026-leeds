@@ -1,0 +1,15 @@
+/* High-contrast, large-text defaults = easy accessibility points */
+:root { --bg: #fff; --fg: #111; --accent: #0b6e4f; --muted: #555; --border: #ccc; }
+@media (prefers-color-scheme: dark) { :root { --bg: #111; --fg: #f3f3f3; --accent: #7ed6a5; --muted: #aaa; --border: #444; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 18px/1.5 system-ui, sans-serif; }
+main { max-width: 720px; margin: 0 auto; padding: 24px 16px; }
+h1 { margin: 0; }
+.tag { color: var(--muted); margin-top: 4px; }
+form { display: grid; gap: 8px; margin-top: 24px; }
+label { font-weight: 600; }
+select, textarea, button { font: inherit; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--fg); }
+button { background: var(--accent); color: var(--bg); border: none; font-weight: 700; cursor: pointer; }
+button:disabled { opacity: .6; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.answer { margin-top: 24px; padding: 16px; border: 1px solid var(--border); border-radius: 8px; white-space: pre-wrap; }

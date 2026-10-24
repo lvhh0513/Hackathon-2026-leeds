@@ -1,9 +1,0 @@
-{
-  "buildCommand": "VITE_DATA_MODE=${VITE_DATA_MODE:-mock} npm run build",
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
-  ]
-}
