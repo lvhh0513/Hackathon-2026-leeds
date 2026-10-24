@@ -1,214 +1,150 @@
 'use strict';
-
-/**
- * server.js -- Central system backend (Task 0.1)
- *
- * The cloud side, on port 5000. Receives cases from every PHC's sync manager,
- * runs the grading pipeline, and serves the ophthalmologist and district-admin
- * interfaces.
- *
- * Endpoint shapes are defined in docs/api-contracts.md, "Central API". The
- * route bodies are filled in by Tasks 3.3, 3.5 and 3.7 -- this file only wires
- * them up.
- */
-
-// This service's .env, then the shared root .env -- by explicit path, see loadEnv.js.
-require('./loadEnv');
-
-const express      = require('express');
+// RetinaTransform: portable SQLite authentication backend (local hackathon demo).
+// No clinical data or retinal images are stored by this service.
+require('dotenv').config({ path: require('path').join(__dirname, '.env') });
+const path = require('path');
+const fs = require('fs');
+const crypto = require('crypto');
+const { DatabaseSync } = require('node:sqlite');
+const express = require('express');
 const cookieParser = require('cookie-parser');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
-// Loaded first so a bad auth configuration (AUTH_ENABLED without JWT_SECRET,
-// an invalid COOKIE_SAMESITE) stops the server at boot, not on first login.
-const authConfig               = require('./services/authConfig');
-
-const gradingQueue             = require('./services/gradingQueue');
-
-const authRouter               = require('./routes/auth');
-
-const casesRouter              = require('./routes/cases');
-const ophthalmologistQueueRouter = require('./routes/ophthalmologistQueue');
-const adminDashboardRouter     = require('./routes/adminDashboard');
-const referralsRouter          = require('./routes/referrals');
-const phcRouter                = require('./routes/phc');
-const patientsRouter           = require('./routes/patients');
-const notificationsRouter      = require('./routes/notifications');
-
-const PORT = parseInt(process.env.PORT || '5000', 10);
-
+const PORT = Number(process.env.PORT || 5000);
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET || JWT_SECRET.length < 32 || JWT_SECRET.startsWith('REPLACE_')) {
+  console.error('Set JWT_SECRET to a random 32+ character value in backend/.env');
+  process.exit(1);
+}
+const DB_PATH = path.resolve(__dirname, process.env.SQLITE_PATH || './data/retinatransform.sqlite');
+fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
+const db = new DatabaseSync(DB_PATH);
+db.exec(`PRAGMA busy_timeout = 5000; PRAGMA foreign_keys = ON;
+CREATE TABLE IF NOT EXISTS users (
+  user_id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  email TEXT NOT NULL UNIQUE COLLATE NOCASE,
+  password_hash TEXT NOT NULL,
+  is_active INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);`);
+const lookup = db.prepare('SELECT user_id, name, email, password_hash, is_active FROM users WHERE email = ?');
+const lookupId = db.prepare('SELECT user_id, name, email, is_active FROM users WHERE user_id = ?');
+const insert = db.prepare('INSERT INTO users (user_id, name, email, password_hash) VALUES (?, ?, ?, ?)');
 const app = express();
-
-// Behind a reverse proxy (the Vite dev proxy locally; nginx/Caddy/a platform
-// load balancer in deployment) req.ip and req.secure must come from
-// X-Forwarded-For / X-Forwarded-Proto, or the login rate limiter counts the
-// proxy as one client. Default: trust loopback proxies only, so a client on the
-// network cannot spoof its address by sending the header itself. In
-// deployment set TRUST_PROXY to the proxy's hop count or address
-// (Express "trust proxy" syntax), e.g. TRUST_PROXY=1.
-app.set('trust proxy', (() => {
-  const v = (process.env.TRUST_PROXY || 'loopback').trim();
-  if (/^\d+$/.test(v)) return Number(v);
-  if (/^(true|false)$/i.test(v)) return v.toLowerCase() === 'true';
-  return v;
-})());
-
-// CORS first, before json parsing and before every route, so it also covers
-// /media (mask and Grad-CAM images the frontend fetches) and so a preflight
-// OPTIONS is answered without being dragged through the body parser.
-app.use(require('./middleware/cors')());
-
-app.use(express.json());
+app.disable('x-powered-by');
+app.use(express.json({ limit: '32kb' }));
 app.use(cookieParser());
-
-// Baseline response headers. Small, hand-rolled for the same reason cors.js is
-// (one fewer dependency on a machine about to be demoed from), and they matter
-// once this serves patient data and images:
-//   nosniff        a stored image must never be sniffed into something else
-//   DENY           nothing here should ever be framed (clickjacking on the
-//                  review controls)
-//   no-referrer    a case URL carries a case id; do not leak it to other sites
-//   no-store       browser and proxy caches must not keep patient JSON/images
-app.use((req, res, next) => {
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('Referrer-Policy', 'no-referrer');
-  res.setHeader('Cache-Control', 'no-store');
+app.use((_req, res, next) => {
+  res.set('Cache-Control', 'no-store');
+  res.set('X-Content-Type-Options', 'nosniff');
+  res.set('X-Frame-Options', 'DENY');
   next();
 });
-
-// GET /health is what the PHC sync manager polls as its network heartbeat
-// before every transmission attempt (design doc §4.2), so its top-level
-// `status` stays 'ok' whenever this process answers: a Postgres blip or a
-// restarting MATLAB session must not report the PHC "offline" and stall every
-// queue. It ALSO reports each dependency separately (db, queue, MATLAB
-// session, Python), each probe time-bounded or cached -- see healthCheck.js.
-app.get('/health', async (req, res, next) => {
-  try { res.json(await require('./services/healthCheck').report()); } catch (err) { next(err); }
-});
-
-// Auth is applied PER ROUTE inside each router, not here (backend plan §A.11):
-// /auth/login and the PHC ingestion routes must stay reachable without a
-// browser session.
-app.use('/api/v1/auth',            authRouter);
-app.use('/api/v1/cases',           casesRouter);
-app.use('/api/v1/ophthalmologist', ophthalmologistQueueRouter);
-app.use('/api/v1/admin',           adminDashboardRouter);
-app.use('/api/v1/referrals',       referralsRouter);
-app.use('/api/v1/phc',             phcRouter);
-app.use('/api/v1/patients',        patientsRouter);
-// Twilio delivery reports (§10.5). Authenticated by Twilio's request
-// signature, not by a session -- see the route file.
-app.use('/api/v1/notifications',   notificationsRouter);
-
-// Case media (fundus images, Grad-CAM overlays). api-contracts.md's case-detail
-// response returns imageUrl / gradCamOverlayUrl as paths under /media, so those
-// paths have to actually resolve to files.
-//
-// Guarded like any other patient-data route (§A.3). The session is a cookie, so
-// the browser sends it on <img> requests too and no signed-URL scheme is needed.
-// routes/media.js: requireAuth + requireRole, decrypts files encrypted at rest,
-// and writes access_log.
-app.use('/media', require('./routes/media'));
-
-// ── Error handling ───────────────────────────────────────────────────────────
-// api-contracts.md: every non-2xx body is { error, message }.
-
-app.use((req, res) => {
-  res.status(404).json({
-    error: 'not_found',
-    message: `No route matches ${req.method} ${req.originalUrl}`,
-  });
-});
-
-app.use((err, req, res, next) => {   // eslint-disable-line no-unused-vars
-  console.error('[central] Unhandled error:', err);
-  // The full error goes to the server log. The RESPONSE carries a generic
-  // message in production: an unhandled error here is usually a database
-  // error, and node-postgres messages quote table names, column names and
-  // sometimes the offending value -- which is patient data.
-  const expose = process.env.NODE_ENV !== 'production';
-  res.status(500).json({
-    error: 'internal_error',
-    message: expose
-      ? (err.message || 'Unexpected server error')
-      : 'Unexpected server error. The details are in the server log.',
-  });
-});
-
-// Task 8.3. Workers start on IMPORT, not just when this file is run directly.
-// Several verification scripts require this module and call app.listen()
-// themselves; if starting the queue lived only in the block below, those would
-// enqueue cases that no worker ever picks up and sit on 'processing' forever —
-// a hang with no error, which is the least debuggable failure available.
-// Starting here costs nothing until something is actually enqueued.
-gradingQueue.start();
-
-if (require.main === module) {
-  // Re-enqueue anything a previous run left mid-flight. The queue is in memory,
-  // so without this a restart would strand every unfinished case on
-  // 'processing' permanently: no retry, no error, no log line — a scan that
-  // looks like it is about to be graded and never is. The database is the queue
-  // of record; recovery is what makes that true.
-  //
-  // Deliberately NOT at import: recovery sweeps every stranded case in the
-  // database, which is right when the server boots and wrong when a test
-  // imports the app — that test would start grading unrelated real backlog.
-  gradingQueue.recoverStranded().catch((err) =>
-    console.error('[central] stranded-case recovery failed:', err.message));
-
-  // §D: the same recovery, periodically, for cases that lose their job while
-  // the server stays up. §E: keep the persistent MATLAB session alive (and
-  // start it now if it is not running). Both main-block only, like recovery:
-  // a test that imports the app must neither sweep real backlog nor launch
-  // MATLAB.
-  require('./services/gradingWatchdog').start();
-  require('./services/matlabSessionSupervisor').start();
-  // Same, for the Python segmentation worker. Its failure is the quiet one:
-  // grading keeps working and every case just takes 17 s longer.
-  require('./services/segWorkerSupervisor').start();
-  // GET /health's Python check is a cached background probe; take the first
-  // one now so the first health call is not 'unknown'.
-  require('./services/healthCheck').probePython();
-  // §G: daily district resource-model run (RESOURCE_MODEL_CRON).
-  require('./services/resourceRecommendations').start();
-  // §G.2's other half: the weekly SimEvents run that keeps the reference
-  // model's recommendations validated rather than merely once-validated.
-  require('./services/simulinkValidation').start();
-
-  // §A.14: TLS when a key and certificate are configured (a self-signed pair
-  // for the demo: `node scripts/generateDevCert.js`). Plain HTTP otherwise,
-  // and it says so -- the Secure session cookie must not be relied on over
-  // plain HTTP to anything but localhost.
-  const TLS_KEY = process.env.TLS_KEY_PATH;
-  const TLS_CERT = process.env.TLS_CERT_PATH;
-  const useTls = !!(TLS_KEY && TLS_CERT);
-  const onListen = () => {
-    console.log(`central backend on ${useTls ? 'https' : 'http'}://localhost:${PORT}` +
-      (useTls ? ' (TLS 1.2+)' : ' (NO TLS -- set TLS_KEY_PATH / TLS_CERT_PATH)'));
-    console.log(`[central] auth: users ${authConfig.AUTH_ENABLED ? 'ENFORCED' : 'not enforced (AUTH_ENABLED=false)'}, ` +
-      `PHC keys ${authConfig.PHC_AUTH_ENABLED ? 'ENFORCED' : 'not enforced (PHC_AUTH_ENABLED=false)'}, ` +
-      `session cookie ${authConfig.cookieOptions.secure ? 'Secure' : 'NOT Secure (COOKIE_SECURE=false: local HTTP dev only)'}`);
-    console.log(`[central] media at rest: ${require('./services/mediaCrypto').enabled()
-      ? 'AES-256-GCM encrypted' : 'NOT encrypted -- set MEDIA_ENCRYPTION_KEY'}`);
-  };
-  const server = useTls
-    ? require('https').createServer({
-      key: require('fs').readFileSync(TLS_KEY),
-      cert: require('fs').readFileSync(TLS_CERT),
-      minVersion: 'TLSv1.2',
-    }, app).listen(PORT, onListen)
-    : app.listen(PORT, onListen);
-
-  // Let a case that is mid-MATLAB finish rather than killing it half-written.
-  // Anything still queued stays 'processing' in the database and is picked up
-  // by the next boot's recoverStranded().
-  for (const signal of ['SIGINT', 'SIGTERM']) {
-    process.on(signal, async () => {
-      console.log(`[central] ${signal} — draining the grading queue`);
-      await gradingQueue.stop({ drain: true });
-      server.close(() => process.exit(0));
-    });
-  }
+const cookieName = 'rt_session';
+const cookieOptions = { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', path: '/' };
+const maxAge = 24 * 60 * 60 * 1000;
+function publicUser(u) {
+  // Compatibility only with Indi's existing frontend: this is NOT a medical qualification.
+  return { userId: u.user_id, id: u.user_id, name: u.name, email: u.email, role: 'ophthalmologist' };
 }
-
-module.exports = app;
+function csrfFor(token) { return crypto.createHmac('sha256', JWT_SECRET).update(`csrf:${token}`).digest('hex'); }
+function createSession(res, u) {
+  const token = jwt.sign({ sub: u.user_id }, JWT_SECRET, { issuer: 'retinatransform', expiresIn: '24h' });
+  res.cookie(cookieName, token, { ...cookieOptions, maxAge });
+  return { user: publicUser(u), csrfToken: csrfFor(token), expiresAt: new Date(Date.now() + maxAge).toISOString() };
+}
+function currentSession(req) {
+  const token = req.cookies?.[cookieName];
+  if (!token) return null;
+  try {
+    const { sub } = jwt.verify(token, JWT_SECRET, { issuer: 'retinatransform' });
+    const user = lookupId.get(sub);
+    return user && user.is_active ? { user, token } : null;
+  } catch { return null; }
+}
+// In-memory, single-process demo login rate limiting.
+const attempts = new Map();
+function rateLimit(req, res, next) {
+  const key = `${req.ip}:${String(req.body?.email || '').trim().toLowerCase()}`;
+  const now = Date.now();
+  if (attempts.size > 2000) attempts.clear();
+  const entry = attempts.get(key);
+  if (entry && now - entry.since < 15 * 60_000 && entry.count >= 10) {
+    return res.status(429).json({ error: 'rate_limited', message: 'Too many attempts. Try again later.' });
+  }
+  req.attemptKey = key;
+  next();
+}
+function failedLogin(key) {
+  const now = Date.now(); const entry = attempts.get(key);
+  attempts.set(key, !entry || now - entry.since > 15 * 60_000
+    ? { since: now, count: 1 } : { ...entry, count: entry.count + 1 });
+}
+const fallbackHash = bcrypt.hashSync('dummy-password-not-valid', 12);
+// Frontend and API should be accessed through Vite's same-origin proxy.
+app.use((req, res, next) => {
+  if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) return next();
+  const origin = req.get('origin');
+  const allowedOrigins = (process.env.APP_ORIGIN || 'http://localhost:5174').split(',').map(x => x.trim());
+  if (origin && !allowedOrigins.includes(origin)) return res.status(403).json({ error: 'forbidden_origin', message: 'Unexpected request origin.' });
+  next();
+});
+app.get('/health', (_req, res) => res.json({ status: 'ok', database: 'sqlite' }));
+app.post('/api/v1/auth/register', rateLimit, async (req, res, next) => {
+  try {
+    const name = typeof req.body?.name === 'string' ? req.body.name.trim() : '';
+    const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+    const password = req.body?.password;
+    if (name.length < 2 || name.length > 100 || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+      || typeof password !== 'string' || password.length < 12 || password.length > 72) {
+      return res.status(400).json({ error: 'invalid_input', message: 'Enter a name, valid email and a password between 12 and 72 characters.' });
+    }
+    if (lookup.get(email)) return res.status(409).json({ error: 'email_exists', message: 'An account with that email already exists.' });
+    const hash = await bcrypt.hash(password, 12);
+    const id = crypto.randomUUID();
+    try { insert.run(id, name, email, hash); }
+    catch (e) {
+      if (e.code === 'ERR_SQLITE_ERROR' && /UNIQUE constraint failed/i.test(e.message)) {
+        return res.status(409).json({ error: 'email_exists', message: 'An account with that email already exists.' });
+      }
+      throw e;
+    }
+    return res.status(201).json(createSession(res, { user_id: id, name, email }));
+  } catch (err) { next(err); }
+});
+app.post('/api/v1/auth/login', rateLimit, async (req, res, next) => {
+  try {
+    const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+    const password = req.body?.password;
+    if (!email || typeof password !== 'string') return res.status(400).json({ error: 'invalid_input', message: 'Email and password are required.' });
+    const user = lookup.get(email);
+    const matches = await bcrypt.compare(password, user?.password_hash || fallbackHash);
+    if (!matches || !user?.is_active) {
+      failedLogin(req.attemptKey);
+      return res.status(401).json({ error: 'invalid_credentials', message: 'Email or password is incorrect.' });
+    }
+    attempts.delete(req.attemptKey);
+    return res.json(createSession(res, user));
+  } catch (err) { next(err); }
+});
+app.get('/api/v1/auth/me', (req, res) => {
+  const session = currentSession(req);
+  if (!session) return res.status(401).json({ error: 'unauthenticated', message: 'Not logged in.' });
+  res.json({ user: publicUser(session.user), csrfToken: csrfFor(session.token) });
+});
+app.post('/api/v1/auth/logout', (_req, res) => {
+  res.clearCookie(cookieName, cookieOptions);
+  res.status(204).end();
+});
+app.get('/api/v1/scanner/status', (req, res) => {
+  if (!currentSession(req)) return res.status(401).json({ error: 'unauthenticated' });
+  res.json({ status: 'awaiting_yuta_integration' });
+});
+app.use((_req, res) => res.status(404).json({ error: 'not_found' }));
+app.use((err, _req, res, _next) => {
+  console.error('Backend error:', err);
+  res.status(500).json({ error: 'server_error', message: 'Unexpected server error.' });
+});
+app.listen(PORT, '127.0.0.1', () => console.log(`RetinaTransform SQLite backend: http://localhost:${PORT}\nDatabase: ${DB_PATH}`));

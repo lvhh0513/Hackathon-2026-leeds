@@ -162,7 +162,7 @@ const RoleRouter = () => {
     }
     setRole(selectedRole);
     setUserProfile(profile);
-    navigate(selectedRole === 'ophthalmologist' ? '/ophth/queue' : '/admin/dashboard');
+    navigate('/scanner');
   };
 
   const handleLogout = async () => {
