@@ -1,0 +1,189 @@
+# NetraSetu -- Render Blueprint for the SIH online-demo deployment ONLY.
+#
+# The final round still runs everything locally via MATLAB (see
+# docs/TECHNICAL_DOCUMENTATION.md) -- this exists purely to give judges a
+# live URL for the current round. Frontends are NOT here: both are already
+# on Vercel and stay there.
+#
+# ML inference is its own third service here (netrasetu-ml-inference,
+# ml-inference-service/) rather than living inside netrasetu-central: both
+# branch-A and segmentation run their additive ONNX Runtime backend (not
+# PyTorch) specifically so this fits a free 512MB web service at all --
+# measured peak ~263MB even under concurrent load. netrasetu-central talks
+# to it over HTTP via INFERENCE_BACKEND=remote (see central-system/backend/
+# services/gradingOrchestrator.js).
+#
+# autoDeployTrigger is "off" on both services deliberately: with a live demo
+# URL, a routine push to main should not silently redeploy it. Trigger
+# deploys manually from the Render Dashboard when ready.
+#
+# One-time manual steps after first deploy (not expressible as Blueprint
+# config -- see the handoff notes given alongside this file):
+#   1. Run `npm run provision-phc-key -- --create "<PHC name>"` on
+#      netrasetu-central (Render Shell/Jobs) to mint PHC_ID + PHC_API_KEY,
+#      then set them on netrasetu-phc.
+#   2. Run `npm run technician -- add <username> "<Full Name>"` on
+#      netrasetu-phc (Render Shell/Jobs) so someone can log in to it.
+# (DB migrations and the two demo clinician accounts ARE automated -- but
+# via netrasetu-central's Dockerfile CMD, not preDeployCommand: Render's
+# free tier does not support preDeployCommand at all (the Blueprint apply
+# step refuses a render.yaml that sets it on a free-tier service). Both
+# scripts are idempotent and run on every container start instead.)
+
+databases:
+  - name: netrasetu-db
+    databaseName: netrasetu_central
+    plan: free
+    region: singapore
+
+services:
+  - type: web
+    name: netrasetu-central
+    runtime: docker
+    region: singapore
+    plan: free
+    dockerfilePath: ./central-system/backend/Dockerfile
+    dockerContext: .
+    autoDeployTrigger: "off"
+    healthCheckPath: /health
+    # Migrations + demo-user seeding run from the Dockerfile's own CMD, not
+    # preDeployCommand -- see the header comment above and that Dockerfile's
+    # own comment for why.
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: netrasetu-db
+          property: connectionString
+
+      # ── Auth / media encryption ──────────────────────────────────────────
+      - key: AUTH_ENABLED
+        value: "true"
+      - key: JWT_SECRET
+        generateValue: true          # 256-bit base64 -- >=32 chars required
+      - key: TRUST_PROXY
+        value: "1"                   # behind Render's load balancer
+      # REQUIRED cross-origin: the frontend (centralsys.vercel.app) and this
+      # backend (onrender.com) are different origins. The default
+      # COOKIE_SAMESITE=lax silently drops the session cookie on every
+      # cross-site request after login -- login itself returns 200 and sets
+      # it, but the next request has no cookie and gets 401, which is
+      # exactly what live testing caught. authConfig.js forces
+      # COOKIE_SECURE=true automatically whenever this is "none" (required
+      # by browsers for SameSite=None to be accepted at all).
+      - key: COOKIE_SAMESITE
+        value: none
+      - key: PHC_AUTH_ENABLED
+        value: "true"
+      - key: MEDIA_ENCRYPTION_KEY
+        generateValue: true          # 256-bit base64 -- exactly what mediaCrypto.js expects
+      # Demo clinician logins (seedDemoUsers.js refuses its .env.example
+      # fallback passwords once NODE_ENV=production, by design -- these two
+      # MUST be filled in the Dashboard before the first deploy succeeds).
+      - key: DEMO_OPHTHALMOLOGIST_PASSWORD
+        sync: false
+      - key: DEMO_ADMIN_PASSWORD
+        sync: false
+
+      # ── Frontend origin (central's own Vercel app) ──────────────────────
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://centralsys.vercel.app
+
+      # ── Inference: this round's online demo only ────────────────────────
+      - key: INFERENCE_BACKEND
+        value: remote
+      # Fixed, not sync:false: same account/Blueprint, same deterministic
+      # onrender.com hostname pattern as CENTRAL_API_URL below.
+      - key: ML_INFERENCE_SERVICE_URL
+        value: https://netrasetu-ml-inference.onrender.com
+      # Not actually invoked (segment() short-circuits to remote before this
+      # is ever read) -- set only so matlabSessionSupervisor's wanted() gate
+      # (which reads this var too) doesn't try to babysit a MATLAB session
+      # that doesn't exist on this host.
+      - key: SEG_INFERENCE_BACKEND
+        value: python
+
+      # ── No MATLAB/local Python on this host -- stop watching for them ───
+      - key: MATLAB_SUPERVISOR_ENABLED
+        value: "false"
+      - key: SEG_WORKER_SUPERVISOR_ENABLED
+        value: "false"
+      - key: SIMULINK_VALIDATION_ENABLED
+        value: "false"
+
+      # ── SMS (Twilio) ──────────────────────────────────────────────────────
+      # SMS_DRY_RUN deliberately NOT set: unset/0 sends for real once these
+      # three are filled (see .env.example) -- real credentials already
+      # exist (the repo-root .env), reused here rather than regenerated.
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_FROM
+        sync: false
+      - key: REFERRAL_CLINIC_NAME
+        sync: false
+      # Twilio signs this URL; it must match exactly what Twilio calls back.
+      - key: TWILIO_STATUS_CALLBACK_URL
+        value: https://netrasetu-central.onrender.com/api/v1/notifications/sms-status
+
+  - type: web
+    name: netrasetu-phc
+    runtime: docker
+    region: singapore
+    plan: free
+    dockerfilePath: ./phc-local-app/backend/Dockerfile
+    dockerContext: .
+    autoDeployTrigger: "off"
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Fixed, not fromService: a Render web service's public hostname is
+      # deterministic (https://<name>.onrender.com) and this is simpler and
+      # more obviously correct than relying on Render's private network
+      # reaching across two independently-deployed services for a demo.
+      - key: CENTRAL_API_URL
+        value: https://netrasetu-central.onrender.com
+      - key: PHC_CODE
+        value: PHC001
+      - key: PHC_NAME
+        value: NetraSetu Demo PHC
+      # From `npm run provision-phc-key` on netrasetu-central (step 1 in the
+      # header above) -- cannot be known until that service is deployed and
+      # migrated once.
+      - key: PHC_ID
+        sync: false
+      - key: PHC_API_KEY
+        sync: false
+      # This PHC's own Vercel frontend origin.
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://phcapp.vercel.app
+      # No MATLAB and no compiled quality-gate exe on this host -- use the
+      # existing JS port (services/qualityGateFallback.js), same opt-in flag
+      # a MATLAB-less dev machine already uses.
+      - key: QUALITY_GATE_ALLOW_FALLBACK
+        value: "1"
+      - key: LOCAL_AUTH_ENABLED
+        value: "true"
+
+  - type: web
+    name: netrasetu-ml-inference
+    runtime: docker
+    region: singapore
+    plan: free
+    dockerfilePath: ./ml-inference-service/Dockerfile
+    dockerContext: .
+    autoDeployTrigger: "off"
+    healthCheckPath: /health
+    envVars:
+      # Not secret (a stable GitHub API asset URL) -- passed to the Docker
+      # build as a normal ARG. MODELS_REPO_TOKEN below is the actual secret,
+      # consumed only via the Dockerfile's BuildKit secret mount, never an
+      # ARG (see that file's own comment on why: ARGs persist in image
+      # layers, secret mounts don't).
+      - key: MODELS_ARCHIVE_URL
+        value: https://api.github.com/repos/tanujb03/netrasetu-models-private/releases/assets/603469029
+      - key: MODELS_REPO_TOKEN
+        sync: false

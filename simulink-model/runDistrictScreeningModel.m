@@ -1,0 +1,174 @@
+function results = runDistrictScreeningModel()
+% RUNDISTRICTSCREENINGMODEL  Simulate districtScreeningSimEvents.slx and check
+% it against the reference queueing model.
+%
+%   results = runDistrictScreeningModel()
+%
+%   Task 3.8. Runs the SimEvents model, extracts the statistics Task 3.8
+%   requires, and diffs them against referenceQueueingModel.m on the same
+%   parameters.
+%
+%   WHY THE COMPARISON MATTERS
+%     Two independent implementations of the same queueing system should agree.
+%     If they do not, one of them is wrong — and finding that here is far
+%     cheaper than finding it when a judge asks why the resource recommendation
+%     is what it is. The two are NOT expected to match exactly: the reference
+%     model queues uploads per PHC while the Simulink model pools them into one
+%     server of capacity numPhcs, so upload-side figures differ by construction
+%     at high utilisation. The review stage should track closely.
+
+thisDir   = fileparts(mfilename('fullpath'));
+modelName = 'districtScreeningSimEvents';
+slxPath   = fullfile(thisDir, [modelName '.slx']);
+
+if ~isfile(slxPath)
+    error(['runDistrictScreeningModel: %s not found.\n' ...
+           'Build it first: buildDistrictScreeningModel'], slxPath);
+end
+
+p = referenceQueueingModel('defaults');
+
+fprintf('=== SimEvents district screening model ===\n');
+fprintf('%d patients/yr, %d PHCs, %d ophthalmologists, %d sim days\n\n', ...
+    p.annualPatients, p.numPhcs, p.numOphthalmologists, p.simDays);
+
+load_system(slxPath);
+cleanup = onCleanup(@() close_system(modelName, 0));
+
+% sim() cannot start while a previous run is going, and the error it raises
+% names an internal SimEvents parameter rather than the real cause -- see the
+% longer note in runFullPipelineModel.m. Same guard, same reason: a leftover
+% run from the Simulink window is not worth protecting.
+if ~strcmp(get_param(modelName, 'SimulationStatus'), 'stopped')
+    set_param(modelName, 'SimulationCommand', 'stop');
+    for k = 1:100
+        if strcmp(get_param(modelName, 'SimulationStatus'), 'stopped'), break; end
+        pause(0.1);
+    end
+end
+
+t0  = tic;
+out = sim(modelName, 'ReturnWorkspaceOutputs', 'on');
+simSeconds = toc(t0);
+fprintf('simulated in %.1fs\n\n', simSeconds);
+
+% ── Extract statistics ──────────────────────────────────────────────────────
+% Each To Workspace sink logs a timeseries; the LAST sample is the running
+% statistic at end of simulation. Utilisation and average wait are cumulative
+% within SimEvents, so the final value is the whole-run figure -- not a mean of
+% the series, which would average the warm-up period in.
+tierA    = lastValue(out, 'tierACleared');
+reviewed = lastValue(out, 'reviewedCount');
+upUtil   = lastValue(out, 'uploadUtil');
+revWait  = lastValue(out, 'reviewWait');
+
+revUtil = zeros(1, p.numOphthalmologists);
+for k = 1:p.numOphthalmologists
+    revUtil(k) = lastValue(out, sprintf('reviewerUtil%d', k));
+end
+
+results = struct( ...
+    'tierAAutoCleared',   tierA, ...
+    'reviewed',           reviewed, ...
+    'uploadUtilisation',  upUtil, ...
+    'reviewWaitMeanSec',  revWait, ...
+    'reviewerUtilisation', mean(revUtil));
+results.simSeconds = simSeconds;
+results.ranAt = char(datetime('now', 'TimeZone', 'UTC', ...
+    'Format', 'yyyy-MM-dd''T''HH:mm:ss''Z'''));
+
+fprintf('--- SimEvents results ---\n');
+fprintf('  Tier A auto-cleared : %d entities\n', tierA);
+fprintf('  reviewed            : %d entities\n', reviewed);
+fprintf('  auto-clear share    : %.1f%%\n', 100*tierA/max(1, tierA+reviewed));
+fprintf('  upload utilisation  : %.1f%%\n', 100*upUtil);
+fprintf('  reviewer utilisation: %.1f%% (mean of %d)\n', ...
+    100*mean(revUtil), p.numOphthalmologists);
+fprintf('  mean review wait    : %.1f min\n', revWait/60);
+
+% ── Cross-check against the reference model ─────────────────────────────────
+r = referenceQueueingModel('run', p);
+
+fprintf('\n--- Reference model, same parameters ---\n');
+fprintf('  reviewed            : %d cases\n', r.casesReviewed);
+fprintf('  auto-clear share    : %.1f%%\n', ...
+    100*r.casesAutoCleared/max(1, r.casesSimulated));
+fprintf('  upload utilisation  : %.1f%%\n', 100*r.uploadUtilisation);
+fprintf('  reviewer utilisation: %.1f%%\n', 100*r.reviewUtilisation);
+fprintf('  mean review wait    : %.1f min\n', r.reviewWaitMeanMin);
+
+% ── Agreement, as data and not only as printed text ─────────────────────────
+% The three comparisons are built into a struct array so a caller -- the
+% backend's weekly validation job (backend plan §G.2) -- can read the verdict
+% instead of parsing this function's console output. Tolerances stay HERE,
+% next to the metrics they belong to, rather than being re-stated in the
+% scheduler: a tolerance that lives in two places is one that will be relaxed
+% in only one of them.
+%
+% Upload figures are deliberately NOT compared. They differ by construction:
+% the reference model queues uploads per PHC, this model pools them into one
+% server of capacity numPhcs, so at high utilisation they must disagree. A
+% comparison that is expected to fail teaches a reader to ignore failures.
+checks = struct('metric', {}, 'simEvents', {}, 'reference', {}, ...
+                'tolerance', {}, 'unit', {}, 'agree', {});
+checks(1) = check('auto-clear share', 100*tierA/max(1,tierA+reviewed), ...
+                  100*r.casesAutoCleared/max(1,r.casesSimulated), 5, '%');
+checks(2) = check('reviewer utilisation', 100*mean(revUtil), ...
+                  100*r.reviewUtilisation, 10, '%');
+checks(3) = check('mean review wait (min)', revWait/60, r.reviewWaitMeanMin, 5, ' min');
+
+fprintf('\n--- Agreement ---\n');
+for i = 1:numel(checks)
+    c = checks(i);
+    fprintf('  %-24s SimEvents %7.1f%s   reference %7.1f%s   %s\n', ...
+            c.metric, c.simEvents, c.unit, c.reference, c.unit, ...
+            ternary(c.agree, 'AGREE', 'DIVERGE'));
+end
+
+results.checks = checks;
+results.agree = all([checks.agree]);
+results.reference = struct( ...
+    'casesSimulated',      r.casesSimulated, ...
+    'casesAutoCleared',    r.casesAutoCleared, ...
+    'casesReviewed',       r.casesReviewed, ...
+    'uploadUtilisation',   r.uploadUtilisation, ...
+    'reviewUtilisation',   r.reviewUtilisation, ...
+    'reviewWaitMeanMin',   r.reviewWaitMeanMin);
+results.params = p;
+
+fprintf(['\nUpload figures are EXPECTED to differ: the reference model queues\n' ...
+         'per PHC, this model pools uploads into one server of capacity %d.\n' ...
+         '  SimEvents %.1f%%  vs  reference %.1f%%\n'], ...
+        p.numPhcs, 100*upUtil, 100*r.uploadUtilisation);
+
+fprintf(['\nAll parameters are modelled assumptions, not measured field data\n' ...
+         '(design doc §16). Say so when presenting these numbers.\n\n']);
+end
+
+% ── Helpers ─────────────────────────────────────────────────────────────────
+function v = lastValue(out, name)
+% Final sample of a logged To Workspace timeseries, or 0 if it never logged
+% (a statistic that never fired produces an empty series, not a zero one).
+v = 0;
+try
+    ts = out.(name);
+    if isa(ts, 'timeseries')
+        d = ts.Data;
+    else
+        d = ts;
+    end
+    if ~isempty(d), v = double(d(end)); end
+catch
+    warning('runDistrictScreeningModel:missingSignal', ...
+            'No logged signal named ''%s''.', name);
+end
+end
+
+function c = check(label, a, b, tol, unit)
+c = struct('metric', label, 'simEvents', a, 'reference', b, ...
+           'tolerance', tol, 'unit', unit, 'agree', abs(a - b) <= tol);
+end
+
+function s = ternary(c, a, b)
+if c, s = a; else, s = b; end
+end
