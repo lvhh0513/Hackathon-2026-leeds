@@ -1,528 +1,443 @@
-# NetraSetu — Explainable AI for Diabetic Retinopathy Screening in Rural India
+# RetinaTransform — AI-Powered Retinal Screening
 
-**Smart India Hackathon 2026 — PS 26038** · Team "Game Of Codes"
+### AI in Healthcare Hackathon | University of Leeds
 
+**Event:** AI in Healthcare Hackathon, organised by Leeds Artificial Intelligence Society  
+**Venue:** Helix, University of Leeds, Leeds, United Kingdom  
+**Dates:** 24–25 October 2026  
+**Team:** Four students from the University of Leeds
 
-NetraSetu lets a minimally trained technician at a rural Primary Health Centre (PHC) screen a
-patient for diabetic retinopathy (DR) in minutes. Two independent AI branches cross-check every
-image, every result is explained — not just scored — and a remote ophthalmologist confirms every
-positive before it reaches the patient.
+RetinaTransform is a healthcare-focused software project that brings together a modern web interface, secure user authentication, and an AI-powered retinal screening application. The project is being developed for the AI in Healthcare Hackathon at the University of Leeds, where medical and engineering students collaborate to explore practical solutions to real clinical challenges.
 
-India has only 20,944 ophthalmologists, about 15 per million people (AIIMS Delhi national survey,
-2025), and blindness is 1.37× more prevalent in rural India than in urban areas (National
-Blindness & Visual Impairment Survey 2015–19). Yet 90% of DR-related vision loss is preventable
-with timely referral. The gap is specialist capacity, not awareness. NetraSetu moves the
-screening step to the PHC, and turns the specialist's job into confirming flagged cases in
-seconds instead of screening everyone.
+The application combines **React, Node.js, SQLite, and Streamlit** into a modular architecture. React provides the user-facing interface, Node.js and SQLite support authentication and account management, and Streamlit hosts the retinal screening workflow.
+
+> **Clinical responsibility:** RetinaTransform is a hackathon prototype intended to explore AI-assisted retinal screening. It is not a substitute for professional medical assessment, and its outputs should not be treated as a definitive diagnosis.
 
 ---
 
-## Live deployment
+## 1. Project Overview and Folder Structure
 
-| What | Link |
-|---|---|
-| Central web (ophthalmologist / district admin) | https://centralsys.vercel.app |
-| PHC technician web (hosted demo station) | https://phcapp.vercel.app |
-| Central API | https://netrasetu-central.onrender.com/health |
-| PHC local API | https://netrasetu-phc.onrender.com/health |
-| Android app (APK, direct install, no Play Store) | [Download](https://expo.dev/artifacts/eas/AXeqZ3jshQkh7qTIsaXkO3nUBWXyqH9XnyRv1di0jYo.apk) |
-| Demo video | [Watch Demo](https://youtu.be/Oz_L2le-gJA?si=gId7qw4Bl5HCIVB0)|
-| Google Drive (shareable PDFs: technical documentation, ML benchmarks, MATLAB-application deliverables) | [Open](https://drive.google.com/drive/folders/1e--esRoyi59QNlBE0cQxvH51eg6y62Pv) |
+### 1.1 Project Overview
 
-**Demo technician login (hosted PHC station):** username `demo`, password `Fundus-Comet-52` — a
-fixed demo-only account, intentionally public for judge access.
+Retinal diseases can affect vision and may require timely clinical assessment. AI-assisted image analysis offers an opportunity to support screening workflows by helping process retinal images and present model-generated results to users.
 
-This hosted deployment is a **separate configuration from the full local/offline deployment** —
-see "Two deployment modes" below and `docs/TECHNICAL_DOCUMENTATION.md` for the full explanation of
-why they differ and what each one proves.
+RetinaTransform explores this approach through a modular application that connects a web-based interface with a dedicated retinal screening component.
 
----
+The project is organised around three main components:
 
-## Run locally
+- **Frontend:** A React application that provides the user interface and navigation.
+- **Backend:** A Node.js and Express API that manages user authentication and communicates with an SQLite database.
+- **AI screening application:** A Streamlit application that provides the retinal screening interface and loads the configured machine-learning model.
 
-One command starts the whole system: Postgres, migrations, seed data, both backends, both web
-front-ends, and the persistent MATLAB session.
+This separation keeps the user interface, authentication logic, and AI screening workflow independently manageable.
 
-### Prerequisites
+### 1.2 Project Objectives
 
-| | Version | Notes |
+The primary objectives of the project are to:
+
+1. Develop an accessible, web-based interface for a healthcare screening workflow.
+2. Implement account registration, login, session management, and logout.
+3. Integrate an AI screening interface into the main web application.
+4. Maintain a modular architecture that supports independent development and testing.
+5. Establish a foundation for future improvements in model integration, clinical usability, security, and explainability.
+
+### 1.3 Technology Stack
+
+| Component | Technology | Responsibility |
 |---|---|---|
-| **Node.js** | 18+ (22 LTS tested) | npm comes with it |
-| **Docker** | Docker Desktop / Engine with Compose v2 | Runs Postgres only |
-| **MATLAB** | R2026a (tested: Update 5) | Required for the default engine (`INFERENCE_BACKEND=matlab`). Core toolboxes: Deep Learning, Image Processing, Statistics and Machine Learning, Medical Imaging. Also used, in offline calibration/experiment/evidence-rendering scripts only (never in the live request path): Computer Vision, Parallel Computing, Global Optimization — see "Standalone MATLAB applications and toolboxes" below for exactly where each one is used. Optional: Simulink + SimEvents (resource model), MATLAB Compiler / Simulink Compiler (standalone executables), MATLAB Report Generator (evidence PDF; a core-MATLAB fallback renderer exists). `matlab` must be on `PATH`, or set `MATLAB_EXECUTABLE` |
-| **Python** | 3.11 (conda env `dr_screening`) | Preprocessing and the segmentation worker: `pip install -r central-system/backend/ml-pipeline/requirements.txt`. If a bare `python` isn't on your `PATH` (it silently defaults to that), set `PYTHON_EXECUTABLE` in `central-system/backend/.env` to this env's `python.exe` directly |
+| Frontend | React, Vite, JavaScript | User interface and navigation |
+| Backend | Node.js, Express.js | REST API and authentication |
+| Database | SQLite | Persistent user and account data |
+| Authentication | bcrypt, JSON Web Tokens (JWT), HTTP-only cookies | Password hashing and session authentication |
+| AI interface | Streamlit, Python | Retinal screening workflow |
+| Model integration | ONNX Runtime / ONNX model | Loading and running the configured screening model |
+| Development | npm, Python, environment variables | Dependency management and local configuration |
 
-There is no Redis: the grading queue runs in-process in the central backend.
+*The table describes the current project architecture and intended integration points. Actual model availability and runtime behaviour depend on the local model files and installed dependencies.*
 
-### Model weights (required, not in git)
+### 1.4 Repository Folder Structure
 
-Trained weights (~1.5 GB) are git-ignored and distributed separately. Their SHA-256 checksums are
-tracked in git, so a fresh clone can verify it has the exact bytes the benchmarks were measured
-with:
+The main project is organised as follows:
+
+```text
+Hackathon-2026-leeds-main/
+│
+├── central-system/
+│   │
+│   ├── frontend/
+│   │   ├── src/
+│   │   │   ├── App.jsx
+│   │   │   ├── config.js
+│   │   │   └── ...
+│   │   ├── .env
+│   │   ├── .env.example
+│   │   ├── package.json
+│   │   └── vite.config.js
+│   │
+│   └── backend/
+│       ├── server.js
+│       ├── data/
+│       │   └── retinatransform.sqlite
+│       ├── .env
+│       └── package.json
+│
+├── retina-screening-main/
+│   ├── retina_app/
+│   │   └── retina_app.py
+│   └── models/
+│       └── branchA_v1.onnx
+│
+└── README.md
+```
+
+**Important notes:**
+
+- The structure above highlights the main components; additional source files, assets, configuration files, and dependencies may exist in the repository.
+- The SQLite database is created or used according to the backend configuration. The database file may not exist until the backend initialises it.
+- The `branchA_v1.onnx` file is the expected model location. The model weights must be obtained from the appropriate project source if they are not included in the repository.
+- Never commit passwords, production secrets, private datasets, or sensitive patient information to version control.
+
+---
+
+## 2. React, Node.js/SQLite, and Streamlit Architecture
+
+### 2.1 System Architecture
+
+RetinaTransform follows a modular architecture in which the frontend, authentication backend, database, and screening application have separate responsibilities.
+
+```text
+                   USER
+                     |
+                     v
+          +----------------------+
+          |   React Frontend     |
+          |       Vite           |
+          |    Port 5174         |
+          +----------------------+
+              |             |
+              |             |
+      /api requests     Screening iframe
+              |             |
+              v             v
+   +----------------+  +-------------------+
+   | Node.js /      |  | Streamlit App      |
+   | Express API    |  | Port 8501          |
+   | Port 5000      |  | Python             |
+   +----------------+  +-------------------+
+              |                   |
+              v                   v
+   +----------------+  +-------------------+
+   | SQLite         |  | ONNX Model         |
+   | User Accounts  |  | Model Inference    |
+   +----------------+  +-------------------+
+```
+
+The frontend communicates with the backend through HTTP API requests. The screening interface is embedded in the frontend using an iframe, allowing the screening application to run separately while remaining accessible from the main interface.
+
+The diagram represents the current integration approach. The React frontend and Streamlit application are separate services; embedding Streamlit does not automatically share the frontend's authentication session with the screening application.
+
+### 2.2 React Frontend
+
+The frontend is built with React and Vite.
+
+Its responsibilities include:
+
+- Rendering the main application interface.
+- Providing login and registration screens.
+- Sending authentication requests to the backend.
+- Displaying relevant success and error messages.
+- Embedding the Streamlit screening interface.
+- Providing navigation between the available application sections.
+
+The frontend uses environment variables to configure the backend API and screening application URLs.
+
+During local development, Vite runs on port `5174`. API requests can be proxied to the backend on port `5000`, allowing the frontend to use same-origin paths such as `/api/v1/auth/login`.
+
+### 2.3 Node.js and Express Backend
+
+The backend provides the application's authentication API using Node.js and Express.
+
+Its responsibilities include:
+
+- Handling user registration and login requests.
+- Validating incoming request data.
+- Hashing passwords using bcrypt rather than storing plaintext passwords.
+- Verifying credentials during login.
+- Issuing and validating JWT-based authentication sessions.
+- Setting an HTTP-only session cookie.
+- Returning the authenticated user's information.
+- Supporting logout and health-check endpoints.
+
+The backend listens on `127.0.0.1:5000` in the current local development configuration.
+
+The principal authentication endpoints are:
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| `POST` | `/api/v1/auth/register` | Register a user account |
+| `POST` | `/api/v1/auth/login` | Authenticate a user |
+| `GET` | `/api/v1/auth/me` | Retrieve the current session's user |
+| `POST` | `/api/v1/auth/logout` | End the current session |
+| `GET` | `/health` | Check backend availability |
+
+The exact request fields and response formats should be confirmed against the backend implementation.
+
+### 2.4 SQLite Database
+
+SQLite provides lightweight, file-based persistence for the backend.
+
+The database path is configurable through the backend environment variables. The current configuration uses:
+
+```text
+central-system/backend/data/retinatransform.sqlite
+```
+
+The backend is responsible for creating, querying, and updating the database as required by its implementation.
+
+SQLite is suitable for local development and a hackathon prototype because it does not require a separately managed database server. A production deployment would require an assessment of concurrent access, backups, access controls, deployment persistence, and operational requirements.
+
+### 2.5 Streamlit Retinal Screening Application
+
+The AI screening component is implemented in Python using Streamlit.
+
+Its responsibilities include:
+
+- Providing a dedicated screening interface.
+- Supporting the configured image-analysis workflow.
+- Loading the expected ONNX model.
+- Presenting the results generated by the configured screening pipeline.
+
+The application is expected to run locally on port `8501`.
+
+The expected model path is:
+
+```text
+retina-screening-main/models/branchA_v1.onnx
+```
+
+**Model availability is a prerequisite for functional inference.** If the model file is absent, the screening application may display a model-loading error. The existence of an interface alone does not establish that the model is trained, clinically validated, or producing medically reliable results.
+
+### 2.6 How the Components Work Together
+
+A typical application flow is:
+
+1. A user opens the React frontend.
+2. The user submits login or registration details.
+3. React sends the request to the Express API.
+4. The backend validates the request and interacts with SQLite when required.
+5. Following successful login, the backend establishes the authentication session through its configured cookie mechanism.
+6. The user accesses the screening interface embedded in the React application.
+7. Streamlit executes the configured screening workflow independently and uses the model file when available.
+8. The screening application presents its generated output through its own interface.
+
+**Current integration limitation:** The iframe provides interface integration, not automatic authentication integration. The Streamlit application does not automatically inherit the React application's authenticated identity or permissions. Any requirement for authenticated screening access must be implemented and tested separately.
+
+---
+
+## 3. Environment Configuration and Installation
+
+### 3.1 Prerequisites
+
+Install the following tools before starting the project:
+
+- Node.js and npm, using versions compatible with the project's `package.json` files.
+- Python 3 and `pip`.
+- Git, if cloning the repository.
+- The Python packages specified by the screening application's dependency files.
+- The required ONNX model file, if model inference is to be tested.
+
+Check the installed versions:
 
 ```bash
-npm run models:verify                              # check what's already on disk
-node scripts/fetch-models.js --url <archive-link>   # or: download + extract + verify in one step
+node --version
+npm --version
+python3 --version
 ```
 
-Served versions and checksums are in `docs/RELEASE.md`.
+### 3.2 Configure the Backend Environment
 
-### Start
+Create or update the backend environment file:
+
+**Location:** `central-system/backend/.env`
+
+```dotenv
+PORT=5000
+SQLITE_PATH=./data/retinatransform.sqlite
+JWT_SECRET=replace_with_a_random_secret_of_at_least_32_characters
+APP_ORIGIN=http://localhost:5174
+NODE_ENV=development
+```
+
+Configuration details:
+
+- `PORT` specifies the backend port.
+- `SQLITE_PATH` specifies the database file location.
+- `JWT_SECRET` is used to sign and verify authentication tokens. The current backend requires a secret of at least 32 characters.
+- `APP_ORIGIN` specifies the permitted frontend origin for the current local setup.
+- `NODE_ENV` identifies the development environment.
+
+Generate a suitable local secret with Python:
 
 ```bash
-git clone <repo> && cd <repo>
-npm run dev:all              # or: scripts/dev-up.sh   |   .\scripts\dev-up.ps1  (Windows)
+python3 -c "import secrets; print(secrets.token_hex(32))"
 ```
 
-On first run this copies every `.env.example` to `.env`, installs dependencies, starts Postgres
-in Docker, applies migrations, seeds two demo users and two PHC sites (printing their passwords
-and API keys once), then starts every service and waits for health checks:
+Copy the generated value into `JWT_SECRET`.
 
-| Service | URL |
-|---|---|
-| PHC web (technician) | http://localhost:5173 |
-| Central web (ophthalmologist / district admin) | http://localhost:5174 |
-| Central API | http://localhost:5000 (`/health`) |
-| PHC local API | http://localhost:4000 (`/health`) |
-| Postgres | `localhost:5433`, user `netrasetu`, db `dr_screening_central` |
+Keep `.env` files private and excluded from Git. Use separate secrets and appropriate configuration for production.
 
-Ctrl+C stops the four services; Postgres and the MATLAB session keep running
-(`npm run db:down` stops Postgres). `npm run dev:check` runs the same sequence and exits non-zero
-if anything is unhealthy.
+### 3.3 Configure the Frontend Environment
 
-**For a fully populated, demo-ready state:** `node scripts/demo-reset.js` pushes real
-public-dataset cases through the real pipeline. See `docs/DEMO_RUNBOOK.md` for the scene-by-scene
-walkthrough. Lost the printed credentials? `node scripts/seed-demo.js --force --write-phc-env`
-issues new ones.
+Create or update the frontend environment file:
 
-### Running a service on its own
+**Location:** `central-system/frontend/.env`
+
+```dotenv
+CENTRAL_API_PROXY_TARGET=http://localhost:5000
+VITE_CENTRAL_API_BASE=
+VITE_DATA_MODE=live
+VITE_SCANNER_URL=http://localhost:8501
+CENTRAL_WEB_PORT=5174
+```
+
+Configuration details:
+
+- `CENTRAL_API_PROXY_TARGET` tells Vite where to forward API requests.
+- `VITE_CENTRAL_API_BASE` is left empty so the frontend can use same-origin API paths through the Vite proxy.
+- `VITE_DATA_MODE=live` selects the live API configuration rather than mock data.
+- `VITE_SCANNER_URL` specifies the Streamlit application URL used by the frontend.
+- `CENTRAL_WEB_PORT` specifies the intended frontend development port.
+
+Vite environment variables prefixed with `VITE_` are exposed to client-side code. Do not place passwords, private keys, or other secrets in frontend environment variables.
+
+Restart the frontend development server after changing its environment file.
+
+### 3.4 Install Backend Dependencies
+
+Open a terminal at the backend directory:
 
 ```bash
-npm run db:up && npm run db:migrate && npm run db:seed    # database only
-cd central-system/backend  && npm start                    # :5000
-cd phc-local-app/backend   && npm start                    # :4000
-cd central-system/frontend && npm run dev                  # :5174
-cd phc-local-app/frontend  && npm run dev                  # :5173
-cd phc-local-app/mobile    && npx expo start                # Expo Go, same LAN as the backends
+cd central-system/backend
+npm install
 ```
 
----
+Ensure the backend `.env` file is configured before starting the API.
 
-## Headline ML results
+Start the backend using the start script defined in `package.json`. If no start script exists, use the project's actual entry point:
 
-Full numbers, populations, intervals, reproduction paths and caveats:
-**[`docs/ML_BENCHMARKS.md`](docs/ML_BENCHMARKS.md)**. Everything below is measured on real data by
-code already in this repository — nothing projected or estimated.
-
-**DR severity classifier (deployed model: EfficientNet-B0 @ 512×512, ordinal-aware loss):**
-
-| Metric | Population | Result | SIH target |
-|---|---|---|---|
-| Quadratic-weighted kappa | Held-out test, n = 628 | **0.884** | — |
-| Referable-DR sensitivity, argmax grade | Held-out test, n = 628 | 92.7% | > 90% ✅ |
-| Referable-DR specificity, argmax grade | Held-out test, n = 628 | 92.4% | > 85% ✅ |
-| Referable-DR sensitivity, live referral threshold | 50-fold cross-fit, n = 1,161 | **95.0%** [92.8, 96.6] | > 90% ✅ |
-| Referable-DR specificity, live referral threshold | 50-fold cross-fit, n = 1,161 | **91.0%** [88.6, 93.0] | > 85% ✅ |
-| Grade-4 (proliferative DR) exact recall | Held-out test, n = 628 | 57.4% (31/54) | |
-
-Grade-4 exact recall is the one deliberately conservative number here — and it's still a safe
-system, because referral fires on calibrated P(grade ≥ 2), not on hitting the exact top grade; a
-proliferative case graded 3 instead of 4 is still referred.
-
-**Safety of the auto-clear tier** — class-conditional conformal calibration, cross-fit on the same
-n = 1,161 population:
-
-| Guard | Threshold | Result |
-|---|---|---|
-| Referable-case coverage, lower confidence bound | ≥ 93% | **94.2%** ✅ |
-| False auto-clear rate, referable cases | ≤ 5% | **0.0%** ✅ |
-| False auto-clear rate, grade ≥ 3 cases | ≤ 2% | **0.0%** ✅ |
-| Grade-4 cases auto-cleared, across 1,000 fold assignments | — | **0** |
-| Tier distribution (pooled) | — | A 38.4% · B 43.8% · C 17.8% |
-
-**External validation on a camera the model has never seen** (Messidor-2, Topcon camera,
-odd-half held-out, n = 872 — never touched until one final audited run):
-
-| Metric | In-domain | Unseen camera (Messidor-2) |
-|---|---|---|
-| AUC of P(grade ≥ 2) | 0.979 | **0.924** [0.900, 0.945] |
-| Referable sensitivity at the shipped threshold | 95.0% | **75.2%** [68.6, 81.4] |
-| False auto-clear, true referable | 0.0% | 2.3% (5/218) |
-| False auto-clear, true grade ≥ 3 | 0.0% | **0.0%** (0/45) |
-
-Sensitivity dropping on an unseen camera is the expected behavior of any vision model under domain
-shift — the product's answer is structural: **a camera or site that hasn't been locally validated
-can never reach the auto-clear tier**, regardless of what the model says. This is the reason the
-camera-validation gate exists, not a blind spot found by accident.
-
-**Deployed, end-to-end pipeline smoke test** (official IDRiD test split, n = 103, overlaps the
-calibration pool so read it as integration proof, not a fourth accuracy claim): QWK 0.841,
-referable sensitivity **100%** (64/64), grade-4 recall **13/13**, 0 Tier-A cases referable.
-
-**Segmentation and lesion models:**
-
-| Model | Test data | Result |
-|---|---|---|
-| Vessel segmentation | CHASE_DB1 held-out (n = 6) | Dice **0.777** |
-| Same model, no retraining | DRIVE, unseen dataset (n = 20) | Dice 0.619 |
-| Optic disc / fovea localization | IDRiD held-out (n = 77) | **98.7% / 96.1%** within one disc radius |
-| Hard-exudate segmentation | IDRiD held-out | Dice 0.583 per-image / 0.733 pixel-pooled |
-| Microaneurysm + haemorrhage segmentation | IDRiD (n = 16) | Merged Dice 0.599 |
-
-Cotton-wool spots and neovascularization are explicitly **not wired into any decision** — measured,
-found not to hold up, and reported as "unmeasured" rather than a false zero. Full reasoning in
-`docs/ML_BENCHMARKS.md` §5.
-
-**Rule engine** (explicit ICDR "4-2-1" criteria, plain auditable code — no learned weights):
-60.2% exact agreement with ground truth on IDRiD's official test set. Its value isn't beating the
-CNN — agreement strengthens a case's confidence tier, and **disagreement unconditionally forces
-mandatory review**, with the final grade set by the ophthalmologist either way.
-
-**Engineering integrity — the numbers behind "it actually runs, consistently":**
-
-| Check | Result |
-|---|---|
-| PyTorch ↔ ONNX ↔ MATLAB tensor parity, all 9 model artifacts | Max difference 1×10⁻⁶–4×10⁻⁵ |
-| Classifier, Python vs. MATLAB inference, real IDRiD images | Grade and tier agree **10/10** |
-| Full-pipeline soak test — every IDRiD image through capture → quality gate → sync → grading | **447/447 graded, 0 failed, 0 timed out** |
-| End-to-end central grading latency (warm MATLAB, dev laptop) | p50 10.9s / p95 22.2s |
-| Local quality-gate latency (desktop MATLAB) | p50 0.49s / p95 3.2s |
-| Automated tests | Conformal 90/90 · fovea gate 12/12 · PHC backend 41/41 · mobile 28 |
-
-**Scope, stated on purpose:** in-domain vs. unseen-camera sensitivity (95.0% → 75.2%), grade-4
-exact-recall is a known next-round target, microaneurysm/haemorrhage evidence is early (16-image
-tune set), neovascularization and cotton-wool spots are measured and gated off rather than
-shipped unproven, and every result above is on public datasets — no real-patient or prospective
-data this round. Full detail: `docs/ML_BENCHMARKS.md` §8.
-
----
-
-## Honest status — what works, what doesn't, and why
-
-We'd rather a judge read this than discover it live.
-
-- **SMS referral notifications are wired and enabled for real sending** (not a dry-run stub) —
-  but on the hosted demo, a Twilio trial account can only deliver SMS to phone numbers that have
-  been manually verified in the Twilio console. **If a judge's number isn't pre-verified, the SMS
-  step will not actually arrive during a live demo**, even though the referral itself completes
-  normally and the system correctly attempted to send it. This is a demo-account limitation, not
-  a code limitation — a production Twilio account (out of trial mode) sends to any number.
-- **The hosted deployment runs on Render's free tier**, which spins down after ~15 minutes idle.
-  The first request after idle can be slow while it wakes back up — this is a hosting-tier
-  behavior, not a performance bug in the pipeline itself.
-- **The hosted deployment's quality gate and rule engine run on JS ports of the MATLAB logic**,
-  not MATLAB itself — Render's free tier has no MATLAB license or install. Both ports are
-  verified against their MATLAB originals (0 mismatches across hundreds of test cases — see
-  `docs/ML_BENCHMARKS.md` §7). See "Two deployment modes" below for why this split exists and what
-  it does and doesn't mean for the result you see.
-- **Media storage on the hosted demo is ephemeral.** Render's free-tier filesystem resets on
-  redeploy, so images from older demo cases may 404 after a redeploy. The local/offline deployment
-  does not have this limitation.
-
-Full status detail: `docs/TECHNICAL_DOCUMENTATION.md`.
-
----
-
-## Simulink models
-
-Two SimEvents discrete-event models (`simulink-model/`), built entirely from script
-(`buildDistrictScreeningModel.m`, `buildFullPipelineModel.m`), validate the system's capacity
-assumptions and demo its queueing behavior under load.
-
-<p>
-  <a href="docs/ppt-audit/assets/districtScreeningSimEvents_full.png">
-    <img src="docs/ppt-audit/assets/districtScreeningSimEvents_full.png" width="420" alt="District-scale SimEvents queueing model: PHC arrivals, tier triage, preemptive reviewer pool">
-  </a>
-  <br><em>District queueing model — PHC arrivals → tier triage (Tier A auto-clears) → a
-  two-ophthalmologist review pool where Tier C preempts Tier B. Click the image for full
-  resolution — GitHub's inline preview doesn't support zoom.</em>
-</p>
-
-<p>
-  <a href="docs/ppt-audit/assets/netraSetuPipeline_full.png">
-    <img src="docs/ppt-audit/assets/netraSetuPipeline_full.png" width="420" alt="Full watchable pipeline model with live sliders for arrival rate, review speed, network and grading availability">
-  </a>
-  <br><em>Full-pipeline model — the entire capture→referral flow as a live, watchable simulation
-  with sliders for patient load, review speed, and network/grading outages. Click the image for
-  full resolution.</em>
-</p>
-
-This district model is also checked weekly, automatically, against an independent pure-MATLAB
-reference implementation of the same queueing logic — a software self-test that catches either
-model drifting from the other.
-
----
-
-## Data flow — how one case actually moves through the system
-
-```
-PHC capture  →  quality gate  →  local queue  →  sync to central  →  grading  →  tiering  →  review  →  referral
+```bash
+node server.js
 ```
 
-1. **Capture.** A technician photographs the retina (desktop camera or a mobile fundus-lens
-   attachment). The image is stored locally first — nothing is lost to a network outage.
+The API should be available at:
 
-2. **Quality gate.** Before anything else happens, the image is checked for focus, field-of-view
-   coverage, illumination, glare, motion blur and occlusion. A failing image is retaken on the
-   spot, at the PHC, rather than discovered unusable after it's already been reviewed remotely.
-   Engine: MATLAB (desktop, compiled to a standalone executable — no MATLAB license needed on the
-   PHC machine) with a verified JS port as the fallback.
+```text
+http://localhost:5000
+```
 
-3. **Preprocessing (Ben Graham method).** The retinal circle is located from the green color
-   channel, the image is cropped tightly to it (removing black borders), and resized to the
-   network's input size. This exact step — one implementation, not a MATLAB port kept in sync by
-   hand — is used for every Branch A inference, in every deployment mode, so what the model is
-   shown is never a question. (An earlier MATLAB-native port of this step was measured and
-   retired: it matched the reference to SSIM 0.981, which still flipped the predicted grade on
-   1 real image in 10 — close enough to look right, not close enough to trust.)
+Check the health endpoint:
 
-4. **Branch A — CNN classification.** An EfficientNet-B0, trained with an ordinal-aware loss,
-   predicts a 5-class DR grade and a calibrated referable probability. Exported to ONNX and
-   imported into MATLAB's Deep Learning Toolbox for MATLAB-backend deployments; numerically
-   verified to agree with the PyTorch original to within 1×10⁻⁶–4×10⁻⁵.
+```bash
+curl http://localhost:5000/health
+```
 
-5. **Branch B — segmentation + rule engine.** Four dedicated models locate the vessels, optic
-   disc and fovea, hard exudates, and microaneurysms/haemorrhages. Their outputs are mapped onto
-   the four retinal quadrants, and an explicit, auditable ICDR "4-2-1" rule engine — ordinary
-   code, not learned weights — applies the standard clinical grading criteria directly.
+The response format depends on the implementation of the health endpoint.
 
-6. **Agreement check.** When Branch A and Branch B agree, that agreement strengthens the case's
-   confidence tier. When they disagree, review is mandatory and the disagreement is shown, never
-   silently resolved in the model's favor.
+### 3.5 Install Frontend Dependencies
 
-7. **Confidence tiering.** Temperature-scaled calibration, referable-stratified conformal
-   prediction, branch agreement, camera-validation status and capture-quality flags combine into
-   one of three tiers: **A** (auto-clear), **B** (AI-assisted review), **C** (full manual review).
-   A camera the system hasn't been locally validated on can never reach Tier A, regardless of what
-   the model says — this is a structural safety control, not a hope.
+Open a second terminal:
 
-8. **Explainability.** A Grad-CAM heatmap, cross-checked for consistency against the lesion
-   segmentation masks, is assembled with the rule-engine criteria that actually fired into one
-   plain-language rationale per case — so a reviewing ophthalmologist sees *why*, not just *what*.
+```bash
+cd central-system/frontend
+npm install
+```
 
-9. **Review and referral.** An ophthalmologist confirms or overrides the result. A referral
-   triggers an SMS to the patient (see "Honest status" above for the hosted-demo caveat on this
-   step) and a clinical-rationale PDF.
+Start the Vite development server:
 
----
+```bash
+npm run dev
+```
 
-## Two deployment modes, and why they differ
+The frontend is configured to run at:
 
-NetraSetu is built and demonstrated in **two deliberately different configurations**, because
-they answer two different questions a hackathon round asks.
+```text
+http://localhost:5174
+```
 
-**Local / full deployment — "can this actually run with no MATLAB license cost at the PHC, and
-does the full MATLAB-native pipeline work end to end?"** This is the system as designed: the
-classifier, segmentation nets, rule engine, camera checks, evidence text and quality gate all run
-natively inside MATLAB (persistent session, or the free MATLAB Runtime via compiled standalone
-executables). This is the configuration the Simulink models validate and the one intended for a
-real PHC rollout.
+If Vite reports that the port is occupied, stop the conflicting process or resolve the port configuration before continuing. Keep the frontend URL consistent with the backend's `APP_ORIGIN` setting.
 
-Seven standalone applications prove this out — exact paths, build scripts and toolbox
-requirements for every one are in "Standalone MATLAB applications and toolboxes" below.
+### 3.6 Install Streamlit Dependencies
 
-**Hosted / online deployment — "can a judge reach this system from anywhere, instantly, with no
-local setup?"** Render's and Vercel's free tiers have no MATLAB available at all, so this
-deployment runs the classifier and segmentation on ONNX Runtime (numerically verified equivalent
-to the MATLAB path) and uses verified JS ports for the quality gate and rule engine, recorded
-honestly as such in every case's own engine-provenance record — the system never claims an engine
-ran when it didn't. This mode exists purely for round-the-clock reachability during judging, not
-as the intended production architecture.
+Open a third terminal:
 
-Both modes are real, both are tested, and the system is explicit — case by case, in its own
-output — about which one produced any given result.
+```bash
+cd retina-screening-main
+python3 -m venv .venv
+```
 
----
+Activate the virtual environment.
 
-## Standalone MATLAB applications and toolboxes
+**macOS / Linux:**
 
-**The seven standalone applications**, each compiled with MATLAB Compiler or Simulink Compiler so
-it runs on a machine with no MATLAB license — only the free MATLAB Runtime. Six ship directly in
-this repo at the paths below; the inference engine (classifier + all four segmentation models,
-265MB) is too large for a normal git push and is instead a
-**[GitHub Release](https://github.com/krrishgadekar/SIH_2026/releases/tag/inference-engine-v1)**.
+```bash
+source .venv/bin/activate
+```
 
-| # | Application | Path in this repo | Built by | Requires at runtime |
-|---|---|---|---|---|
-| 1 | PHC quality gate | `phc-local-app/backend/quality-gate-matlab/dist/qualityGate.exe` | `buildQualityGateExe.m` | MATLAB Compiler Runtime |
-| 2 | District resource model (compiled from the real Simulink model) | `simulink-model/deployable/dist/NetraSetuResourceModel.exe` | `simulink-model/deployable/buildResourceModelApp.m` | Simulink Compiler Runtime |
-| 3 | District resource model (plain-MATLAB CLI reimplementation of the same queueing logic, no Simulink Compiler needed) | `simulink-model/resourceModelApp/dist/resourceModel.exe` | `simulink-model/resourceModelApp/buildResourceModelExe.m` | MATLAB Compiler Runtime |
-| 4 | Case-chain engine | `central-system/backend/ml-pipeline/deploy/dist/netraSetuCaseMain.exe` | `central-system/backend/ml-pipeline/deploy/buildCaseChain.m` | MATLAB Compiler Runtime (+ Deep Learning, Image Processing, Statistics and Machine Learning add-ons) |
-| 5 | Clinical-rationale report generator | `central-system/backend/ml-pipeline/explainability/reportGeneratorApp/dist/reportGenerator.exe` | `.../reportGeneratorApp/buildReportGeneratorExe.m` | MATLAB Compiler Runtime |
-| 6 | Interactive full-pipeline dashboard | `simulink-model/deployable/pipeline/dist/NetraSetuPipelineDashboard.exe` | `simulink-model/deployable/pipeline/buildPipelineDashboardApp.m` | Simulink Compiler Runtime |
-| 7 | Inference engine (classifier + 4 segmentation models) | not in git (265MB) — [GitHub Release](https://github.com/krrishgadekar/SIH_2026/releases/tag/inference-engine-v1) | same `buildCaseChain.m`, inference target | MATLAB Compiler Runtime (+ same add-ons as #4) |
+**Windows PowerShell:**
 
-Rows 2 and 3 are genuinely two different applications, not a duplicate: one is Simulink Compiler's
-build of the actual `.slx` model, the other a plain-MATLAB-Compiler reimplementation of the same
-queueing logic, kept independently buildable with no Simulink Compiler license at all.
+```powershell
+.venv\Scripts\Activate.ps1
+```
 
-**Every MATLAB toolbox this project uses, and exactly where:**
+Install the dependencies specified by the project:
 
-| Toolbox / product | Used in | What for |
+```bash
+pip install -r requirements.txt
+```
+
+Run this command from the directory containing the screening application's `requirements.txt`. If the dependency file is located elsewhere, use its actual path. If no requirements file is supplied, install the dependencies documented by the project rather than assuming a package list.
+
+Start Streamlit:
+
+```bash
+streamlit run retina_app/retina_app.py --server.port 8501
+```
+
+The screening interface should be available at:
+
+```text
+http://localhost:8501
+```
+
+### 3.7 Start the Complete Application
+
+For local development, run the three services in separate terminals.
+
+| Service | Command | Local URL |
 |---|---|---|
-| Deep Learning Toolbox | Case-chain and inference engine (`ml-pipeline/deploy`) | Runs the ONNX-imported DR classifier natively in MATLAB |
-| Image Processing Toolbox | Preprocessing, quality gate, report generator, case-chain/inference engine | Image I/O, cropping, resizing, basic filtering |
-| Statistics and Machine Learning Toolbox | Case-chain and inference engine | Calibration and conformal-prediction statistics behind the confidence tiers |
-| Medical Imaging Toolbox | `ml-pipeline/preprocessing/readFundusImage.m` | Reads DICOM images a clinical-grade fundus camera exports (Ophthalmic Photography format), and pulls the camera manufacturer/model and eye laterality out of the file's own metadata. Deliberately kept out of the compiled quality-gate bundle (licensing/bundle-size tradeoff), so the PHC desktop app still uses plain image reading |
-| Computer Vision Toolbox | `ml-pipeline/explainability/generateEvidenceReport.m`, `ml-pipeline/verifyPhase4.m` | Annotating lesion boxes/shapes onto the evidence images shown in a case's clinical rationale |
-| Parallel Computing Toolbox | Offline calibration and experiment scripts — `ml-pipeline/grading/optimizeRuleThresholds.m`, `ml-pipeline/explainability/batchGenerateReports.m`, `ml-pipeline/experiments/runTask92.m`, `quality-gate-matlab/calibrateQualityThresholds.m`, `simulink-model/monteCarloQueueing.m`, `simulink-model/sweepDistrictScenarios.m` | Parallelizing threshold sweeps and batch report generation during development — never in the live request path |
-| Global Optimization Toolbox | `ml-pipeline/grading/optimizeRuleThresholds.m` | Searching the rule-engine's threshold space during calibration, before the chosen thresholds are frozen into the deployed rule engine |
-| Simulink + SimEvents | `simulink-model/` | The two discrete-event models above (district queueing, full pipeline) |
-| Simulink Compiler | Apps #2 and #6 above | Compiling the Simulink models themselves into standalone executables |
-| MATLAB Compiler | Apps #1, #3, #4, #5, #7 above | Compiling plain-MATLAB entry points into standalone executables |
-| MATLAB Report Generator | Clinical-rationale PDF generation | Evidence PDF layout; a core-MATLAB fallback renderer exists if this toolbox isn't available |
+| Backend API | `node server.js` | `http://localhost:5000` |
+| React frontend | `npm run dev` | `http://localhost:5174` |
+| Streamlit screening | `streamlit run retina_app/retina_app.py --server.port 8501` | `http://localhost:8501` |
 
-Computer Vision, Parallel Computing and Global Optimization never run in the live request
-path — they're real, verified-in-code dependencies of the offline calibration and
-evidence-rendering tooling, not of anything a judge's live case goes through.
+Start each command from the appropriate project directory and ensure that all required environment files and dependencies are configured.
 
----
+Once the services are running, open the React frontend. Test authentication independently, then check whether the embedded screening interface loads and whether the required model is available.
 
-## Prototype
+### 3.8 Installation and Configuration Checks
 
-Click any screenshot for full resolution — GitHub's inline preview doesn't support zoom.
+Before considering the local setup complete, verify the following:
 
-**Landing and role selection**
+- [ ] Backend dependencies are installed.
+- [ ] The backend `.env` file contains a valid secret and the correct frontend origin.
+- [ ] The backend health endpoint responds successfully.
+- [ ] The SQLite database is created or accessible at the configured path.
+- [ ] Frontend dependencies are installed.
+- [ ] The frontend runs on port `5174`.
+- [ ] The Vite API proxy points to the backend on port `5000`.
+- [ ] Login, registration, session retrieval, and logout are tested.
+- [ ] The Streamlit application starts on port `8501`.
+- [ ] The frontend iframe points to the correct Streamlit URL.
+- [ ] The required ONNX model file exists and can be loaded before testing inference.
 
-<p>
-  <a href="docs/prototype/00-Intro/01-splash.png"><img src="docs/prototype/00-Intro/01-splash.png" width="260" alt="NetraSetu splash screen"></a>
-  <a href="docs/prototype/00-Intro/02-eye-anatomy.png"><img src="docs/prototype/00-Intro/02-eye-anatomy.png" width="260" alt="Eye anatomy explainer animation"></a>
-  <a href="docs/prototype/00-Intro/03-role-selection.png"><img src="docs/prototype/00-Intro/03-role-selection.png" width="260" alt="Central web role selection: ophthalmologist or district worker"></a>
-</p>
+If the screening application reports that the model file cannot be found, verify the configured model path and obtain the required model weights. Installing the software dependencies alone does not supply missing model files.
 
-**PHC technician** (`phc-local-app`) — registers the patient, captures the retina photo, and
-clears the local quality gate before anything is sent anywhere:
-
-<p>
-  <a href="docs/prototype/01-PHC%20Technician/01-patient-registration.png"><img src="docs/prototype/01-PHC%20Technician/01-patient-registration.png" width="400" alt="PHC technician: new patient registration form"></a>
-  <a href="docs/prototype/01-PHC%20Technician/02-capture-and-quality-gate.png"><img src="docs/prototype/01-PHC%20Technician/02-capture-and-quality-gate.png" width="400" alt="PHC technician: image capture and local quality gate"></a>
-</p>
-
-**Ophthalmologist** (`central-system/frontend`) — reviews the AI grade against the rule engine,
-the Grad-CAM evidence and lesion counts, and confirms or overrides before a referral fires:
-
-<p>
-  <a href="docs/prototype/02-Ophthalmologist/01-case-list.png"><img src="docs/prototype/02-Ophthalmologist/01-case-list.png" width="400" alt="Ophthalmologist: case list"></a>
-  <a href="docs/prototype/02-Ophthalmologist/02-gradcam-and-lesion-evidence.png"><img src="docs/prototype/02-Ophthalmologist/02-gradcam-and-lesion-evidence.png" width="400" alt="Ophthalmologist: Grad-CAM and lesion evidence"></a>
-  <a href="docs/prototype/02-Ophthalmologist/03-ai-confidence-and-context.png"><img src="docs/prototype/02-Ophthalmologist/03-ai-confidence-and-context.png" width="400" alt="Ophthalmologist: AI confidence, uncertainty and patient context"></a>
-  <a href="docs/prototype/02-Ophthalmologist/04-confirm-or-override.png"><img src="docs/prototype/02-Ophthalmologist/04-confirm-or-override.png" width="400" alt="Ophthalmologist: confirm or override decision"></a>
-</p>
-
-Confirming or overriding renders the downloadable clinical-rationale PDF (MATLAB Report
-Generator, with a core-MATLAB fallback renderer), and a confirmed referral reaches the patient
-directly by SMS:
-
-<p>
-  <a href="docs/prototype/02-Ophthalmologist/05-clinical-rationale-report.jpeg"><img src="docs/prototype/02-Ophthalmologist/05-clinical-rationale-report.jpeg" width="400" alt="Clinical-rationale PDF report: fundus photo, Grad-CAM, AI grade"></a>
-  <a href="docs/prototype/02-Ophthalmologist/06-patient-sms-notification.jpeg"><img src="docs/prototype/02-Ophthalmologist/06-patient-sms-notification.jpeg" width="260" alt="Patient referral SMS notification"></a>
-</p>
-
-**District admin** (`central-system/frontend`) — the district-wide view: screening volume,
-DR grade distribution, the referral tracker, PHC uptime, and MATLAB-Simulink-backed resource
-planning:
-
-<p>
-  <a href="docs/prototype/03-District%20Admin/01-overview.png"><img src="docs/prototype/03-District%20Admin/01-overview.png" width="400" alt="District admin: overview"></a>
-  <a href="docs/prototype/03-District%20Admin/02-dashboard-kpis.png"><img src="docs/prototype/03-District%20Admin/02-dashboard-kpis.png" width="400" alt="District admin: dashboard KPIs"></a>
-  <a href="docs/prototype/03-District%20Admin/03-dashboard-dr-grade-distribution.png"><img src="docs/prototype/03-District%20Admin/03-dashboard-dr-grade-distribution.png" width="400" alt="District admin: DR grade distribution"></a>
-  <a href="docs/prototype/03-District%20Admin/04-referral-tracker.png"><img src="docs/prototype/03-District%20Admin/04-referral-tracker.png" width="400" alt="District admin: referral tracker"></a>
-  <a href="docs/prototype/03-District%20Admin/05-phc-health.png"><img src="docs/prototype/03-District%20Admin/05-phc-health.png" width="400" alt="District admin: PHC health"></a>
-  <a href="docs/prototype/03-District%20Admin/06-resource-allocation.png"><img src="docs/prototype/03-District%20Admin/06-resource-allocation.png" width="400" alt="District admin: Simulink-backed resource allocation"></a>
-</p>
-
----
-
-## Research and references
-
-Full register, with status (fetched / logged / canonical / estimate) for every entry, internal
-evidence file paths, and a log of claims corrected or dropped along the way:
-**[`docs/NetraSetu — Research & References Register.md`](docs/NetraSetu%20%E2%80%94%20Research%20%26%20References%20Register.md)**.
-The core sources:
-
-**Clinical evidence and benchmarks**
-- Abràmoff et al., IDx-DR pivotal trial, *npj Digital Medicine* 2018 — 87.2% sensitivity / 90.7% specificity, 900 patients, 10 sites ([doi.org/10.1038/s41746-018-0040-6](https://doi.org/10.1038/s41746-018-0040-6))
-- Medios AI / Remidio SMART study (India), PMC7039584 — 93.0% sensitivity / 92.5% specificity, n=900 ([pmc.ncbi.nlm.nih.gov/articles/PMC7039584](https://pmc.ncbi.nlm.nih.gov/articles/PMC7039584/))
-- Wilkinson et al., International Clinical DR and DME Severity Scales, *Ophthalmology* 2003 — defines the 5-level ICDR scale this system's grades and rule engine follow ([pubmed.ncbi.nlm.nih.gov/13129861](https://pubmed.ncbi.nlm.nih.gov/13129861/))
-- Lu et al., comparative accuracy of handheld/smartphone fundus cameras, *PLOS Digital Health* 2022 — mobile-lens feasibility reference ([journals.plos.org/digitalhealth](https://journals.plos.org/digitalhealth/article?id=10.1371%2Fjournal.pdig.0000131))
-
-**Health-system, policy and economics**
-- Purohit et al., cost-effectiveness of DR screening at Indian PHCs, *PharmacoEconomics Open* 2025 — $354/QALY for AI-supported screening ([pmc.ncbi.nlm.nih.gov/articles/PMC12209073](https://pmc.ncbi.nlm.nih.gov/articles/PMC12209073))
-- IDF Diabetes Atlas, 11th ed. (2024 data), India — ~90 million adults with diabetes ([diabetesatlas.org](https://diabetesatlas.org/data-by-location/country/india/))
-- AIIMS Delhi national ophthalmic workforce survey (Vashist et al.), Oct 2025 — 20,944 ophthalmologists, ~15 per million people
-- National Blindness and Visual Impairment Survey 2015–19 — ~6.2M blind, ~55M visually impaired nationally ([ncbi.nlm.nih.gov/pmc/articles/PMC8725073](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8725073/))
-- Ayushman Bharat — DR screening added to the PHC/HWC eye-care package, April 2022
-
-**Datasets** — APTOS 2019, EyePACS (curated subset), IDRiD, CHASE_DB1, DRIVE, Messidor-2. Exact role of each in training/evaluation: see `docs/TECHNICAL_DOCUMENTATION.md` §11.
-
-**Method references** (standard techniques this system implements) — U-Net (Ronneberger et al. 2015), EfficientNet-B0 (Tan & Le 2019), temperature scaling (Guo et al. 2017), MC Dropout (Gal & Ghahramani 2016), conformal prediction (Vovk, Gammerman & Shafer 2005; Angelopoulos & Bates 2021), class-conditional conformal prediction (Vovk 2012), Grad-CAM / Grad-CAM++ (Selvaraju et al. 2017; Chattopadhay et al. 2018), Ben Graham preprocessing (Graham, Kaggle DR competition 2015), Frangi vesselness (Frangi et al., MICCAI 1998), quadratic-weighted kappa (Cohen 1968).
-
-**MathWorks references** — the Medical Imaging Toolbox's own multilabel DR fundus classification example (validated reference architecture for this system's MATLAB-native path), and MathWorks' own writeup of how Team TwinX won SIH 2025.
-
-**Existing solutions landscape** — IDx-DR/LumineticsCore and EyeArt (clinic-based, strongly validated); Remidio Medios AI and Forus Health (India-built portable devices, the closest real-world precedent to this system's deployment model).
-
----
-
-## Security
-
-Security measures in place:
-
-- **Authentication on every application:** central web (session-based, bcrypt, role-enforced
-  server-side), PHC desktop and mobile (bcrypt technician accounts), PHC-to-central ingestion (a
-  per-PHC API key).
-- **Encryption at rest on the central server:** AES-256-GCM for stored images, Grad-CAM overlays
-  and report PDFs.
-- **Audit log:** every access to patient data is recorded.
-
-This is a **prototype-stage security floor, not a production compliance claim**. The PHC-side
-local databases (desktop SQLite, mobile store) are not yet encrypted, and no penetration test or
-security audit has been done. See `docs/TECHNICAL_DOCUMENTATION.md` §9.
-
----
-
-## Datasets
-
-Only public research datasets are used anywhere in this project — **no real patient data** in
-seeds, tests, demos or deployments: APTOS 2019 (India, Aravind Eye Hospital), IDRiD (India,
-Nanded), EyePACS (curated subset), CHASE_DB1, DRIVE (evaluation only), Messidor-2 (external
-validation only). Details: `docs/TECHNICAL_DOCUMENTATION.md` §11.
-
----
-
-## Environment configuration
-
-Every service reads its own `.env`, and each `.env.example` documents every variable it reads.
-**Twilio credentials are deliberately excluded below** — request them privately if you need to
-test real SMS sending; every other value here is safe to share.
-
-| File | Key variables |
-|---|---|
-| `central-system/backend/.env` | `DATABASE_URL`, `CORS_ALLOWED_ORIGINS`, `AUTH_ENABLED`, `JWT_SECRET`, `PHC_AUTH_ENABLED`, `MATLAB_EXECUTABLE`, `INFERENCE_BACKEND` (`matlab` / `python` / `remote`), `SEG_INFERENCE_BACKEND` (`matlab` / `python`), `PYTHON_EXECUTABLE` (unset = bare `python` on `PATH` — set explicitly if that isn't your intended interpreter), `MEDIA_ENCRYPTION_KEY`, `MATLAB_ALLOW_FALLBACK` |
-| `phc-local-app/backend/.env` | `CENTRAL_API_URL`, `PHC_CODE`, `PHC_ID`, `PHC_API_KEY`, `MATLAB_EXECUTABLE`, `LOCAL_AUTH_ENABLED`, `QUALITY_GATE_ALLOW_FALLBACK` |
-| `central-system/frontend/.env` | `VITE_CENTRAL_API_BASE`, `VITE_DATA_MODE` |
-| `phc-local-app/frontend/.env` | `VITE_LOCAL_API_BASE`, `VITE_DATA_MODE` |
-| `phc-local-app/mobile/.env` | `EXPO_PUBLIC_CENTRAL_API_URL`, `EXPO_PUBLIC_PHC_API_KEY`, `EXPO_PUBLIC_PHC_CODE`, `EXPO_PUBLIC_USE_RN_FETCH` (keep set to `1` — Expo Go's own fetch can't send the image upload), `EXPO_PUBLIC_TECHNICIANS` (bakes in fixed logins for a release build reached off the PHC's LAN) |
-
-No app has a built-in server URL — an unset one shows an on-screen error, never a silent default.
-`VITE_DATA_MODE=mock` shows fixture data with a permanent **"DEMO DATA"** banner and is never used
-as a silent fallback when a real request fails — that's a system-wide, non-negotiable rule.
-
----
-
-## Documentation index
-
-| Document | Contents |
-|---|---|
-| [`docs/TECHNICAL_DOCUMENTATION.md`](docs/TECHNICAL_DOCUMENTATION.md) | System design, every component explained, dual-deployment architecture, implementation status |
-| [`docs/ML_BENCHMARKS.md`](docs/ML_BENCHMARKS.md) | Every ML metric, with population, n, interval and caveats |
-| [`docs/api-contracts.md`](docs/api-contracts.md) | Request/response shapes; the source of truth over any other doc |
-| [`docs/DEMO_RUNBOOK.md`](docs/DEMO_RUNBOOK.md) | Scene-by-scene demo walkthrough |
-| [`docs/RELEASE.md`](docs/RELEASE.md) | Served model versions and checksums |
-
----
-
-## Design philosophy
-
-The UI is high-contrast, cyber-brutalist and clinical (`#E63B2E` / `#0A0A0A`), with monospace
-telemetry. One standing rule runs through every screen in every app: **a failure never gets to
-look like a success.** A network error, a timeout and a working result are always visibly
-distinguishable.
