@@ -14,9 +14,11 @@ HERE = Path(__file__).parent
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE.parent / "backend"))  # reuse the starter's AI switch (llm.py)
 
+from cam_onnx import CamOnnx  # noqa: E402
 from grader import OnnxGrader  # noqa: E402
 from logic import GRADES, decide, softmax  # noqa: E402
 from quality import assess  # noqa: E402
+from relevance import check_fundus  # noqa: E402
 
 try:
     from dotenv import load_dotenv
@@ -26,9 +28,40 @@ try:
 except Exception:  # letter drafting is optional
     llm = None
 
-DEFAULT_ONNX = str(
-    Path(__file__).resolve().parent.parent / "models" / "branchA_v1.onnx"
+# Find the model inside this repository, regardless of the developer's OS,
+# username, Downloads folder name, or where the repository was cloned.
+# Optional override: set RETINA_ONNX_PATH to a model file on this server.
+MODEL_RELATIVE_PATH = (
+    Path("central-system") / "backend" / "ml-pipeline"
+    / "training" / "onnx_out" / "branchA_v1.onnx"
 )
+
+
+def find_onnx_model() -> str:
+    import os
+
+    override = os.environ.get("RETINA_ONNX_PATH", "").strip()
+    if override:
+        override_path = Path(override).expanduser().resolve()
+        if override_path.is_file():
+            return str(override_path)
+        raise FileNotFoundError(
+            f"RETINA_ONNX_PATH points to a missing file: {override_path}"
+        )
+
+    # Works for retina-screening-main/retina_app/retina_app.py nested inside
+    # a project on Windows, macOS, or Linux.
+    for folder in (HERE.resolve(), *HERE.resolve().parents):
+        candidate = folder / MODEL_RELATIVE_PATH
+        if candidate.is_file():
+            return str(candidate)
+
+    # Preserve a useful path in the settings input even when the file is absent.
+    # The existing model-loading error will warn the user.
+    return str(HERE.resolve().parent.parent / MODEL_RELATIVE_PATH)
+
+
+DEFAULT_ONNX = find_onnx_model()
 
 st.set_page_config(page_title="Retinal screening assistant", layout="wide")
 
@@ -85,6 +118,8 @@ st.markdown(
 
 # Each card has an icon AND words, so it never relies on colour alone.
 STATUS_CARDS = {
+    "not_retina": ("✖", "NOT A RETINA PHOTO", "#7A1010", "#FBE9E7",
+                   "This does not look like a retina photo, so no grade is shown. Please upload a fundus photo."),
     "retake": ("🔁", "RETAKE THE PHOTO", "#7A1010", "#FBE9E7",
                "The photo is not good enough to assess. Take a new one before any grading."),
     "uncertain": ("⚠️", "UNCERTAIN: CLINICIAN REVIEW", "#5E3A00", "#FFF1D6",
@@ -97,13 +132,18 @@ STATUS_CARDS = {
 
 
 def show_status_card(status: str, referral_suggested: bool) -> None:
-    key = status if status in ("retake", "uncertain") else ("refer" if referral_suggested else "no_refer")
+    key = status if status in ("not_retina", "retake", "uncertain") else ("refer" if referral_suggested else "no_refer")
     icon, headline, fg, bg, sentence = STATUS_CARDS[key]
     st.markdown(
         f'<div class="status-card" role="status" style="border-color:{fg};background:{bg};color:{fg}">'
         f'<p class="tag">RESULT</p><p class="headline">{icon} {headline}</p><p class="sentence">{sentence}</p></div>',
         unsafe_allow_html=True,
     )
+
+
+@st.cache_resource
+def load_cam(path: str):
+    return CamOnnx(str(Path(path).expanduser()))
 
 
 @st.cache_resource
@@ -115,6 +155,7 @@ with st.sidebar:
     st.header("Settings")
     st.caption("Model: Branch-A v1 ONNX")
     with st.expander("Advanced settings"):
+        check_relevance = st.checkbox("Check that the image is a retina photo", value=True)
         onnx_path = st.text_input("ONNX path", DEFAULT_ONNX)
         temperature = st.number_input("Calibration T (placeholder)", 0.5, 5.0, 1.0, 0.1)
         uncertain_below = st.slider("Uncertain if top probability below", 0.3, 0.9, 0.6, 0.05)
@@ -147,6 +188,15 @@ if bgr is None:
     st.error("Could not read this image.")
     st.stop()
 
+if check_relevance:
+    relevance = check_fundus(bgr)
+    if not relevance["ok"]:
+        st.image(cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB), caption="Uploaded image", width=360)
+        show_status_card("not_retina", False)
+        for reason in relevance["reasons"]:
+            st.caption(reason)
+        st.stop()
+
 quality = assess(bgr, min_sharp, min_bright)
 probs = softmax(grader.predict(bgr), temperature)
 result = decide(probs, quality["ok"], uncertain_below, referral_at)
@@ -178,6 +228,31 @@ with right:
             st.caption("This is not a clearance. Photos can be missed or misread.")
         st.bar_chart(pd.DataFrame({"probability": probs}, index=GRADES))
     st.caption(f"Model: {grader.name}")
+
+if result["status"] != "retake":
+    with st.expander("Advanced details: where the model looked", expanded=False):
+        cam_key = f"cam::{file.name}"
+        if st.button("Show where the model looked"):
+            with st.spinner("Computing the map..."):
+                try:
+                    st.session_state[cam_key] = load_cam(onnx_path).explain(bgr)
+                except Exception as e:
+                    st.error(f"Could not compute the map: {e}")
+        cam = st.session_state.get(cam_key)
+        if cam is not None:
+            if cam["info"]["empty"]:
+                st.info("No region stands out.")
+            else:
+                st.image(
+                    cam["image"],
+                    caption="Grad-CAM-style map (computed from the ONNX model). Each heat cell covers about "
+                    "32x32 pixels, so it shows a region, not a single lesion. Where the model looked. "
+                    "Not a diagnosis and not proof of where the disease is.",
+                    use_container_width=True,
+                )
+                if cam["info"]["mostlyOutsideRetina"]:
+                    st.warning("Most of the heat was outside the retina. Treat this map with care.")
+
 
 def template_letter(result: dict, quality: dict) -> str:
     """Plain fallback letter built from the result. No AI, no diagnosis."""

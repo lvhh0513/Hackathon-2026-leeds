@@ -28,7 +28,7 @@ const CHAPTERS = [
   { s: SCREENS, label: 'Enter' },
 ];
 
-export const EyeJourneyLogin = ({ onLogin }) => {
+export const EyeJourneyLogin = ({ onLogin, skipAuth = false }) => {
   const { t } = useTranslation();
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [anatomyState, setAnatomyState] = useState('idle'); // idle | building | ready | fallback

@@ -13,7 +13,7 @@ function ScannerPage({ user, onLogout }) {
     <main style={{ minHeight: '100vh', background: '#18100e', color: '#f8ede6', fontFamily: 'Inter, Arial, sans-serif' }}>
       <header style={{ padding: '20px clamp(20px, 4vw, 64px)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
         <strong style={{ letterSpacing: '0.12em' }}>RETINA<span style={{ color: '#e45b45' }}>TRANSFORM</span></strong>
-        <button type="button" onClick={onLogout} style={{ padding: '12px 18px', color: 'white', background: '#a72c25', border: '1px solid #ed6756', cursor: 'pointer' }}>LOG OUT</button>
+        <button type="button" onClick={onLogout} style={{ padding: '12px 18px', color: 'white', background: '#a72c25', border: '1px solid #ed6756', cursor: 'pointer' }}>MAIN PAGE</button>
       </header>
       <section style={{ padding: '4px clamp(20px, 4vw, 64px) 24px' }}>
         <p style={{ color: '#eb8c73', letterSpacing: '0.18em', fontSize: '0.8rem', marginBottom: 8 }}>SCREENING PORTAL</p>
@@ -116,7 +116,7 @@ function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/" element={user ? <Navigate to="/scanner" replace /> : <EyeJourneyLogin skippAuth={true} onLogin={handleLogin} />} />
+      <Route path="/" element={user ? <Navigate to="/scanner" replace /> : <EyeJourneyLogin skipAuth={true} onLogin={handleLogin} />} />
       <Route path="/scanner" element={user ? <ScannerPage user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
       <Route path="*" element={<Navigate to={user ? '/scanner' : '/'} replace />} />
     </Routes>
