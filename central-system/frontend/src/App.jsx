@@ -116,7 +116,7 @@ function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/" element={user ? <Navigate to="/scanner" replace /> : <EyeJourneyLogin onLogin={handleLogin} />} />
+      <Route path="/" element={user ? <Navigate to="/scanner" replace /> : <EyeJourneyLogin skippAuth={true} onLogin={handleLogin} />} />
       <Route path="/scanner" element={user ? <ScannerPage user={user} onLogout={handleLogout} /> : <Navigate to="/" replace />} />
       <Route path="*" element={<Navigate to={user ? '/scanner' : '/'} replace />} />
     </Routes>
