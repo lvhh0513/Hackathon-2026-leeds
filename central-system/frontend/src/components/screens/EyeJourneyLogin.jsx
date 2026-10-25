@@ -675,7 +675,7 @@ export const EyeJourneyLogin = ({ onLogin }) => {
         <p className="sr-only">A journey into the eye.</p>
 
         {/* Auth Overlay — reveals at scroll end */}
-        <section className="enter" id="auth-overlay">
+        {/* <section className="enter" id="auth-overlay">
           <div className="enter__content">
             {activeAuthRole === 'signup' ? (
               renderSignupCard()
@@ -697,6 +697,75 @@ export const EyeJourneyLogin = ({ onLogin }) => {
                       <div className="enter__role-sub">{role.subtitle}</div>
                       <div className="enter__role-desc">{role.description}</div>
 
+                      <div className="enter__role-arrow">→</div>
+                    </button>
+                  ))}
+                </div>
+                <div className="signup-action-row">
+                  <button
+                    type="button"
+                    className="signup-action-button"
+                    onClick={() => setActiveAuthRole('signup')}
+                    disabled={isTransitioning}
+                  >
+                    SIGN UP +
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </section> */}
+        <section className="enter" id="auth-overlay">
+          <div className="enter__content">
+            {skipAuth ? (
+              <div className="enter__roles enter__roles--single">
+                <button
+                  type="button"
+                  className="enter__role"
+                  onClick={() => {
+                    if (isTransitioning) return;
+                    setIsTransitioning(true);
+                    setTimeout(() => onLogin('guest', 'guest'), 400);
+                  }}
+                  disabled={isTransitioning}
+                >
+                  <div className="enter__role-icon">◉</div>
+                  <div className="enter__role-title">
+                    ENTER RETINATRANSFORM
+                  </div>
+                  <div className="enter__role-sub">
+                    AI-ASSISTED RETINAL SCREENING
+                  </div>
+                  <div className="enter__role-desc">
+                    Continue to the retinal screening application.
+                    No account required for this hackathon demo.
+                  </div>
+                  <div className="enter__role-arrow">→</div>
+                </button>
+              </div>
+            ) : activeAuthRole === 'signup' ? (
+              renderSignupCard()
+            ) : activeAuthRole ? (
+              renderAuthCard(activeAuthRole)
+            ) : (
+              <>
+                <p className="enter__title">
+                  SELECT YOUR PORTAL TO PROCEED
+                </p>
+                <div className="enter__roles enter__roles--single">
+                  {ROLES.map((role) => (
+                    <button
+                      key={role.id}
+                      className="enter__role"
+                      onClick={() => handleRoleClick(role.id)}
+                      disabled={isTransitioning}
+                    >
+                      <div className="enter__role-icon">{role.icon}</div>
+                      <div className="enter__role-title">{role.title}</div>
+                      <div className="enter__role-sub">{role.subtitle}</div>
+                      <div className="enter__role-desc">
+                        {role.description}
+                      </div>
                       <div className="enter__role-arrow">→</div>
                     </button>
                   ))}
